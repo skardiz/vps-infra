@@ -1,0 +1,58 @@
+services:
+  {{ tinyauth_service_name }}:
+    container_name: {{ tinyauth_service_name }}
+    image: {{ tinyauth_image }}
+    restart: unless-stopped
+
+    environment:
+      APP_URL: "https://{{ tinyauth_domain }}"
+      TRUST_PROXY: "true"
+{% if tinyauth_auto_redirect | default(false) | bool %}
+      OAUTH_AUTO_REDIRECT: "pocketid"
+{% endif %}
+
+      # PocketID OAuth configuration
+      PROVIDERS_POCKETID_CLIENT_ID: "{{ tinyauth_pocketid_client_id }}"
+      PROVIDERS_POCKETID_CLIENT_SECRET: "{{ tinyauth_pocketid_client_secret }}"
+      
+      # URL для браузера (редирект на логин)
+      PROVIDERS_POCKETID_AUTH_URL: "{{ tinyauth_pocketid_public_url }}/authorize"
+      
+      # URL для сервера (обмен кода на токен внутри Docker сети)
+      PROVIDERS_POCKETID_TOKEN_URL: "{{ tinyauth_pocketid_internal_url }}/api/oidc/token"
+      PROVIDERS_POCKETID_USER_INFO_URL: "{{ tinyauth_pocketid_internal_url }}/api/oidc/userinfo"
+      
+      PROVIDERS_POCKETID_REDIRECT_URL: "https://{{ tinyauth_domain }}/api/oauth/callback/pocketid"
+      PROVIDERS_POCKETID_SCOPES: "openid email profile groups"
+      PROVIDERS_POCKETID_NAME: "Pocket ID"
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "{{ docker_network_name }}"
+
+      # HTTP роутер
+      traefik.http.routers.{{ tinyauth_service_name }}-http.rule: "Host(`{{ tinyauth_domain }}`)"
+      traefik.http.routers.{{ tinyauth_service_name }}-http.entrypoints: "web"
+      traefik.http.routers.{{ tinyauth_service_name }}-http.service: "{{ tinyauth_service_name }}"
+
+      # HTTPS роутер
+      traefik.http.routers.{{ tinyauth_service_name }}.rule: "Host(`{{ tinyauth_domain }}`)"
+      traefik.http.routers.{{ tinyauth_service_name }}.entrypoints: "websecure"
+      traefik.http.routers.{{ tinyauth_service_name }}.tls: "true"
+      traefik.http.routers.{{ tinyauth_service_name }}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.{{ tinyauth_service_name }}.service: "{{ tinyauth_service_name }}"
+
+      # Service
+      traefik.http.services.{{ tinyauth_service_name }}.loadbalancer.server.port: "{{ tinyauth_port }}"
+
+      # ForwardAuth middleware
+      traefik.http.middlewares.{{ tinyauth_service_name }}.forwardauth.address: "http://{{ tinyauth_service_name }}:{{ tinyauth_port }}/api/auth/traefik"
+      traefik.http.middlewares.{{ tinyauth_service_name }}.forwardauth.trustForwardHeader: "true"
+      traefik.http.middlewares.{{ tinyauth_service_name }}.forwardauth.authResponseHeaders: "X-User,X-Email,X-Groups"
+
+    networks:
+      - {{ docker_network_name }}
+
+networks:
+  {{ docker_network_name }}:
+    external: true

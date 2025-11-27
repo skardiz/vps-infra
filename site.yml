@@ -18,3 +18,9 @@
 
     - role: syncthing
       tags: syncthing
+
+    - role: pocketid
+      tags: pocketid
+
+    - role: tinyauth
+      tags: tinyauth

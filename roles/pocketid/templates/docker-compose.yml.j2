@@ -1,0 +1,51 @@
+services:
+  {{ pocketid_service_name }}:
+    container_name: {{ pocketid_service_name }}
+    image: {{ pocketid_image }}
+    restart: unless-stopped
+
+    environment:
+      APP_URL: "https://{{ pocketid_domain }}"  # ← Исправлено имя
+      TRUST_PROXY: "{{ pocketid_trust_proxy }}"
+      PUID: "{{ pocketid_puid }}"
+      PGID: "{{ pocketid_pgid }}"
+{% if pocketid_maxmind_license_key %}
+      MAXMIND_LICENSE_KEY: "{{ pocketid_maxmind_license_key }}"
+{% endif %}
+
+    volumes:
+      - "{{ pocketid_data_dir }}/data:/app/data"  # ← Исправлен путь
+
+    # Healthcheck
+    healthcheck:
+      test: ["CMD", "/app/pocket-id", "healthcheck"]
+      interval: 1m30s
+      timeout: 5s
+      retries: 2
+      start_period: 10s
+
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: "{{ docker_network_name }}"
+
+      # HTTP роутер
+      traefik.http.routers.{{ pocketid_service_name }}-http.rule: "Host(`{{ pocketid_domain }}`)"
+      traefik.http.routers.{{ pocketid_service_name }}-http.entrypoints: "web"
+      traefik.http.routers.{{ pocketid_service_name }}-http.service: "{{ pocketid_service_name }}"
+
+      # HTTPS роутер
+      traefik.http.routers.{{ pocketid_service_name }}.rule: "Host(`{{ pocketid_domain }}`)"
+      traefik.http.routers.{{ pocketid_service_name }}.entrypoints: "websecure"
+      traefik.http.routers.{{ pocketid_service_name }}.tls: "true"
+      traefik.http.routers.{{ pocketid_service_name }}.tls.certresolver: "letsencrypt"
+      traefik.http.routers.{{ pocketid_service_name }}.service: "{{ pocketid_service_name }}"
+
+      # Сервис (PocketID слушает на 1411!)
+      traefik.http.services.{{ pocketid_service_name }}.loadbalancer.server.port: "1411"
+
+    networks:
+      - {{ docker_network_name }}
+
+networks:
+  {{ docker_network_name }}:
+    external: true

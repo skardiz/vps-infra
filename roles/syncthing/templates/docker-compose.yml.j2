@@ -33,6 +33,9 @@ services:
       traefik.http.routers.{{ syncthing_service_name }}.tls: "true"
       traefik.http.routers.{{ syncthing_service_name }}.tls.certresolver: "letsencrypt"
       traefik.http.routers.{{ syncthing_service_name }}.service: "{{ syncthing_service_name }}"
+      
+      # 🛡️ ЗАЩИТА ЧЕРЕЗ TINYAUTH 🛡️
+      traefik.http.routers.{{ syncthing_service_name }}.middlewares: "tinyauth@docker"
 
       # Сервис
       traefik.http.services.{{ syncthing_service_name }}.loadbalancer.server.port: "{{ syncthing_web_port }}"

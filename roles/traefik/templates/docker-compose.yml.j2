@@ -36,7 +36,7 @@ services:
     labels:
       traefik.enable: "true"
 
-      # ЯВНОЕ ИМЯ СЕРВИСА (чтобы было красиво traefik@docker)
+      # ЯВНОЕ ИМЯ СЕРВИСА (api@internal - внутренний сервис Traefik)
       traefik.http.services.{{ traefik_service_name }}.loadbalancer.server.port: "8080"
 
       # Дашборд на домене
@@ -46,10 +46,8 @@ services:
       traefik.http.routers.dashboard.tls: "true"
       traefik.http.routers.dashboard.tls.certresolver: "letsencrypt"
 
-      # Защита паролем
-      traefik.http.routers.dashboard.middlewares: "auth"
-      # Экранируем $ для Docker Compose, заменяя на $$
-      traefik.http.middlewares.auth.basicauth.users: "{{ traefik_dashboard_auth | replace('$', '$$') }}"
+      # 🔥 ЗАЩИТА ЧЕРЕЗ TINYAUTH 🔥
+      traefik.http.routers.dashboard.middlewares: "tinyauth@docker"
 
       # Сеть
       traefik.docker.network: "{{ traefik_docker_network }}"
