@@ -1,7 +1,7 @@
 services:
   worker:
     image: {{ restic_image }}
-    container_name: {{ restic_service_name }}_worker
+    container_name: {{ restic_service_name }}
     hostname: "{{ ansible_hostname }}"
     
     environment:

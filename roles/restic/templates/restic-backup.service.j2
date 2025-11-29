@@ -9,7 +9,7 @@ WorkingDirectory={{ restic_compose_dir }}
 TimeoutStartSec=10800
 MemoryMax=1G
 ExecStartPre=-/usr/bin/docker stop {{ restic_stop_service }}
-ExecStart=/usr/bin/docker start -a {{ restic_service_name }}_worker
+ExecStart=/usr/bin/docker start -a {{ restic_service_name }}
 ExecStopPost=/usr/bin/docker start {{ restic_stop_service }}
 
 [Install]

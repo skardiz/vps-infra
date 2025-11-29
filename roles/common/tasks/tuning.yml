@@ -69,7 +69,7 @@
   ansible.builtin.command:
     cmd: ethtool -K {{ ansible_default_ipv4.interface }} gro on gso on
   register: common_ethtool_offload
-  changed_when: common_ethtool_offload.rc == 0
+  changed_when: false
   failed_when:
     - common_ethtool_offload.rc != 0
     - "'Operation not supported' not in common_ethtool_offload.stderr"
@@ -79,7 +79,7 @@
   ansible.builtin.command:
     cmd: ethtool -K {{ ansible_default_ipv4.interface }} tx-nocache-copy on
   register: common_ethtool_nocache
-  changed_when: common_ethtool_nocache.rc == 0
+  changed_when: false
   failed_when:
     - common_ethtool_nocache.rc != 0
     - "'Operation not supported' not in common_ethtool_nocache.stderr"

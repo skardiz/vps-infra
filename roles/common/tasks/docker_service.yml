@@ -42,3 +42,4 @@
     remove_orphans: true
   become: true
   become_user: "{{ deploy_user }}"
+  when: common_docker_service_start | default(true)
