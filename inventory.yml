@@ -1,0 +1,19 @@
+all:
+  # Глобальные переменные для всех хостов
+  vars:
+    # Магия: Ansible возьмет значение из Vault при запуске
+    ansible_host: "{{ vault_server_ip }}"
+    hostname: tw01
+
+  children:
+    # Группа для первичной настройки (под root)
+    vps_bootstrap:
+      hosts:
+        bootstrap_node:
+          ansible_user: root
+
+    # Группа для основной работы (под deploy)
+    vps:
+      hosts:
+        prod_node:
+          ansible_user: deploy

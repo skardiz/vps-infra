@@ -33,3 +33,6 @@
 
     - role: autoheal
       tags: autoheal
+
+    - role: restic
+      tags: restic

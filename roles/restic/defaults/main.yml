@@ -1,0 +1,36 @@
+---
+restic_service_name: "restic"
+restic_image: "local/restic-with-rclone:latest"
+restic_compose_dir: "/opt/restic"
+
+# --- Расписания ---
+# Бэкап: каждый день в 04:00
+restic_timer_schedule: "*-*-* 04:00:00"
+# Проверка (Check): каждое воскресенье в 05:00
+restic_check_schedule: "Sun *-*-* 05:00:00"
+
+# --- Настройки проверки ---
+# Сколько данных считывать для проверки целостности (чтобы не качать всё)
+restic_check_subset: "5%"
+
+# --- Секреты (из Vault) ---
+restic_password: "{{ vault_restic_password }}"
+restic_rclone_config: "{{ vault_restic_rclone_config }}"
+
+# --- Репозиторий ---
+restic_repo: "rclone:gdrive:vps_backups"
+restic_healthcheck_url: ""
+
+# --- Политика хранения ---
+restic_keep_daily: 7
+restic_keep_weekly: 4
+
+# --- Сервис для остановки ---
+restic_stop_service: "matrix"
+
+# --- Пути ---
+restic_mounts:
+  - src: "/opt"
+    dst: "/data/opt"
+  - src: "/srv/docker"
+    dst: "/data/srv_docker"

@@ -1,0 +1,34 @@
+#!/bin/sh
+set -e
+
+ping_hc() {
+    if [ -n "{{ restic_healthcheck_url }}" ]; then
+        wget -q -O /dev/null "{{ restic_healthcheck_url }}$1"
+    fi
+}
+trap 'ping_hc "/fail"' ERR
+
+echo "🚀 [Restic] Started at $(date)"
+ping_hc "/start"
+
+echo "🔓 [Restic] Checking locks..."
+restic unlock || true
+
+if ! restic snapshots > /dev/null 2>&1; then
+    echo "🆕 [Restic] Initializing repository..."
+    restic init
+fi
+
+echo "📦 [Restic] Backing up..."
+TARGETS="{% for mount in restic_mounts %}{{ mount.dst }} {% endfor %}"
+
+restic backup $TARGETS --tag daily_backup
+
+echo "🧹 [Restic] Pruning..."
+restic forget \
+    --keep-daily {{ restic_keep_daily }} \
+    --keep-weekly {{ restic_keep_weekly }} \
+    --prune
+
+echo "✅ [Restic] Success!"
+ping_hc ""
