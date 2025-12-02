@@ -1,0 +1,172 @@
+services:
+  # ==========================================
+  # 1. LLDAP (Backend)
+  # ==========================================
+  lldap:
+    container_name: lldap
+    image: {{ identity_lldap_image }}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.5'
+    environment:
+      - UID={{ default_puid | default(1000) }}
+      - GID={{ default_pgid | default(1000) }}
+      - TZ={{ timezone | default('Europe/Moscow') }}
+      - LLDAP_HTTP_PORT={{ identity_lldap_port_http }}
+      - LLDAP_LDAP_PORT={{ identity_lldap_port_ldap }}
+      - LLDAP_LDAP_BASE_DN={{ identity_lldap_base_dn }}
+      - LLDAP_KEY_SEED={{ identity_lldap_key_seed }}
+      - LLDAP_JWT_SECRET={{ identity_lldap_jwt_secret }}
+      - LLDAP_LDAP_USER_DN={{ identity_lldap_admin_dn }}
+      - LLDAP_LDAP_USER_PASS={{ identity_lldap_admin_pass }}
+      - LLDAP_DATABASE_URL=sqlite:///data/users.db?mode=rwc
+      - LLDAP_VERBOSE=false
+    volumes:
+      - {{ identity_data_dir }}/lldap:/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:{{ identity_lldap_port_http }}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network={{ docker_network_name }}"
+      - "traefik.http.routers.lldap.rule=Host(`{{ identity_lldap_domain }}`)"
+      - "traefik.http.routers.lldap.entrypoints=websecure"
+      - "traefik.http.routers.lldap.tls=true"
+      - "traefik.http.routers.lldap.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.lldap.service=lldap"
+      - "traefik.http.routers.lldap.middlewares=geoblock-strict@file"
+      - "traefik.http.services.lldap.loadbalancer.server.port={{ identity_lldap_port_http }}"
+    networks:
+      - {{ docker_network_name }}
+
+  # ==========================================
+  # 2. PocketID (Identity Provider)
+  # ==========================================
+  pocketid:
+    container_name: pocketid
+    image: {{ identity_pocketid_image }}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      lldap:
+        condition: service_healthy
+    environment:
+      APP_URL: "https://{{ identity_pocketid_domain }}"
+      TRUST_PROXY: "{{ identity_pocketid_trust_proxy }}"
+      PUID: "{{ identity_pocketid_puid }}"
+      PGID: "{{ identity_pocketid_pgid }}"
+      
+      # 🔥 МАГИЯ: Разрешаем настройку через ENV
+      UI_CONFIG_DISABLED: "{{ identity_pocketid_ui_config_disabled }}"
+
+      # LDAP Auto Config
+      SESSION_DURATION: "129600"
+      ANALYTICS_DISABLED: "true"
+      LDAP_SOFT_DELETE_USERS: "false"
+      LDAP_ENABLED: "true"
+      LDAP_URL: "ldap://lldap:{{ identity_lldap_port_ldap }}"
+      LDAP_BIND_DN: "uid={{ identity_lldap_admin_dn }},ou=people,{{ identity_lldap_base_dn }}"
+      LDAP_BIND_PASSWORD: "{{ identity_lldap_admin_pass }}"
+      # Тут используем правильную базу (ou=people...)
+      LDAP_BASE: "{{ identity_pocketid_ldap_base }}"
+      LDAP_USER_SEARCH_FILTER: "(objectClass=person)"
+      LDAP_USER_GROUP_SEARCH_FILTER: "(objectClass=groupOfUniqueNames)"
+      LDAP_ATTRIBUTE_ADMIN_GROUP: "{{ identity_pocketid_ldap_admin_group }}"
+
+      # Mappings
+      LDAP_ATTRIBUTE_USER_UNIQUE_IDENTIFIER: "{{ identity_pocketid_ldap_attr_user_uid }}"
+      LDAP_ATTRIBUTE_USER_USERNAME: "{{ identity_pocketid_ldap_attr_user_username }}"
+      LDAP_ATTRIBUTE_USER_EMAIL: "{{ identity_pocketid_ldap_attr_user_email }}"
+      LDAP_ATTRIBUTE_USER_FIRST_NAME: "{{ identity_pocketid_ldap_attr_user_firstname }}"
+      LDAP_ATTRIBUTE_USER_LAST_NAME: "{{ identity_pocketid_ldap_attr_user_lastname }}"
+      LDAP_ATTRIBUTE_USER_PROFILE_PICTURE: "{{ identity_pocketid_ldap_attr_user_picture }}"
+      LDAP_ATTRIBUTE_GROUP_MEMBER: "{{ identity_pocketid_ldap_attr_group_member }}"
+      LDAP_ATTRIBUTE_GROUP_UNIQUE_IDENTIFIER: "{{ identity_pocketid_ldap_attr_group_uid }}"
+      LDAP_ATTRIBUTE_GROUP_NAME: "{{ identity_pocketid_ldap_attr_group_name }}"
+
+{% if identity_pocketid_maxmind_license_key %}
+      MAXMIND_LICENSE_KEY: "{{ identity_pocketid_maxmind_license_key }}"
+{% endif %}
+    volumes:
+      - {{ identity_data_dir }}/pocketid/data:/app/data
+    healthcheck:
+      test: ["CMD", "/app/pocket-id", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network={{ docker_network_name }}"
+      - "traefik.http.routers.pocketid.rule=Host(`{{ identity_pocketid_domain }}`)"
+      - "traefik.http.routers.pocketid.entrypoints=websecure"
+      - "traefik.http.routers.pocketid.tls=true"
+      - "traefik.http.routers.pocketid.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.pocketid.service=pocketid"
+      - "traefik.http.routers.pocketid.middlewares=geoblock-strict@file"
+      - "traefik.http.services.pocketid.loadbalancer.server.port={{ identity_pocketid_port }}"
+    networks:
+      - {{ docker_network_name }}
+
+  # ==========================================
+  # 3. TinyAuth (Middleware)
+  # ==========================================
+  tinyauth:
+    container_name: tinyauth
+    image: {{ identity_tinyauth_image }}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    depends_on:
+      pocketid:
+        condition: service_healthy
+    environment:
+      APP_URL: "https://{{ identity_tinyauth_domain }}"
+      TRUST_PROXY: "true"
+{% if identity_tinyauth_auto_redirect | default(false) | bool %}
+      OAUTH_AUTO_REDIRECT: "pocketid"
+{% endif %}
+      PROVIDERS_POCKETID_CLIENT_ID: "{{ identity_tinyauth_client_id }}"
+      PROVIDERS_POCKETID_CLIENT_SECRET: "{{ identity_tinyauth_client_secret }}"
+      PROVIDERS_POCKETID_AUTH_URL: "{{ identity_tinyauth_pocketid_public_url }}/authorize"
+      PROVIDERS_POCKETID_TOKEN_URL: "{{ identity_tinyauth_pocketid_internal_url }}/api/oidc/token"
+      PROVIDERS_POCKETID_USER_INFO_URL: "{{ identity_tinyauth_pocketid_internal_url }}/api/oidc/userinfo"
+      PROVIDERS_POCKETID_REDIRECT_URL: "https://{{ identity_tinyauth_domain }}/api/oauth/callback/pocketid"
+      PROVIDERS_POCKETID_SCOPES: "openid email profile groups"
+      PROVIDERS_POCKETID_NAME: "Pocket ID"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network={{ docker_network_name }}"
+      - "traefik.http.routers.tinyauth.rule=Host(`{{ identity_tinyauth_domain }}`)"
+      - "traefik.http.routers.tinyauth.entrypoints=websecure"
+      - "traefik.http.routers.tinyauth.tls=true"
+      - "traefik.http.routers.tinyauth.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.tinyauth.service=tinyauth"
+      - "traefik.http.routers.tinyauth.middlewares=geoblock-strict@file"
+      - "traefik.http.services.tinyauth.loadbalancer.server.port={{ identity_tinyauth_port }}"
+      - "traefik.http.middlewares.tinyauth.forwardauth.address=http://tinyauth:{{ identity_tinyauth_port }}/api/auth/traefik"
+      - "traefik.http.middlewares.tinyauth.forwardauth.trustForwardHeader=true"
+      - "traefik.http.middlewares.tinyauth.forwardauth.authResponseHeaders=X-User,X-Email,X-Groups"
+    networks:
+      - {{ docker_network_name }}
+
+networks:
+  {{ docker_network_name }}:
+    external: true

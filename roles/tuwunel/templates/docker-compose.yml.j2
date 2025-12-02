@@ -8,6 +8,10 @@ services:
       - {{ tuwunel_compose_dir }}/tuwunel.toml:/etc/tuwunel/tuwunel.toml:ro
       - {{ tuwunel_data_dir }}:/var/lib/tuwunel
       - /etc/localtime:/etc/localtime:ro
+{% if tuwunel_ldap_enabled %}
+      # Маунтим секретный файл с паролем LDAP (read-only)
+      - {{ tuwunel_compose_dir }}/.ldap_bind_password:{{ tuwunel_ldap_bind_password_file }}:ro
+{% endif %}
 
     networks:
       - {{ tuwunel_docker_network }}

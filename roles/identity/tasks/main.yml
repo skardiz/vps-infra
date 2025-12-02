@@ -1,0 +1,25 @@
+---
+- name: Validate required Identity secrets
+  ansible.builtin.assert:
+    that:
+      - vault_lldap_admin_password is defined and vault_lldap_admin_password | length > 0
+      - vault_lldap_key_seed is defined
+      - vault_tinyauth_pocketid_client_id is defined
+    fail_msg: "CRITICAL: Missing required Vault secrets for Identity stack!"
+  tags: [deploy, identity, check]
+
+- name: Deploy Identity Stack (LLDAP + PocketID + TinyAuth)
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: docker_service
+  vars:
+    common_docker_service_name: "Identity Stack"
+    common_docker_service_dir: "{{ identity_compose_dir }}"
+    common_docker_service_compose_template: "{{ playbook_dir }}/roles/identity/templates/docker-compose.yml.j2"
+    common_docker_service_data_dirs:
+      - "{{ identity_data_dir }}/lldap"
+      - "{{ identity_data_dir }}/pocketid/data"
+    common_docker_service_owner: "{{ default_puid | default('1000') }}"
+    common_docker_service_group: "{{ default_pgid | default('1000') }}"
+
+  tags: [deploy, identity]

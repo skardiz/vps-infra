@@ -24,6 +24,18 @@
   become: true
   tags: [setup, directories]
 
+# LDAP Password File (New!)
+- name: Create LDAP bind password file
+  ansible.builtin.copy:
+    content: "{{ tuwunel_ldap_bind_password }}"
+    dest: "{{ tuwunel_compose_dir }}/.ldap_bind_password"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: '0600'
+  become: true
+  when: tuwunel_ldap_enabled | default(false)
+  tags: [config, tuwunel]
+
 # Tuwunel Config
 - name: Generate tuwunel.toml configuration
   ansible.builtin.template:

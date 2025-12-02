@@ -12,10 +12,10 @@
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
-    owner: "{{ deploy_user }}"
-    group: "{{ deploy_user }}"
+    owner: "{{ common_docker_service_owner | default(deploy_user) }}"
+    group: "{{ common_docker_service_group | default(deploy_user) }}"
     mode: "0755"
-  loop: "{{ common_docker_service_data_dirs | default([common_docker_service_dir]) }}"
+  loop: "{{ [common_docker_service_dir] + (common_docker_service_data_dirs | default([])) }}"
   become: true
 
 - name: "Render docker-compose.yml for {{ common_docker_service_name }}"

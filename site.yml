@@ -4,29 +4,20 @@
   become: true
 
   roles:
+    # 1. База
     - role: common
       tags: common
 
     - role: docker
       tags: docker
 
+    # 2. Безопасность и Аутентификация (Фундамент)
+    - role: identity
+      tags: identity
+
+    # 3. Инфраструктура (Роутинг, Бэкапы, Лечение)
     - role: traefik
       tags: traefik
-
-    - role: amnezia
-      tags: amnezia
-
-    - role: syncthing
-      tags: syncthing
-
-    - role: pocketid
-      tags: pocketid
-
-    - role: tinyauth
-      tags: tinyauth
-
-    - role: eturnal
-      tags: eturnal
 
     - role: autoheal
       tags: autoheal
@@ -34,5 +25,15 @@
     - role: restic
       tags: restic
 
-    - role: tuwunel
+    # 4. Прикладные сервисы
+    - role: tuwunel  # Matrix (Зависит от Identity для LDAP)
       tags: tuwunel
+
+    - role: eturnal  # TURN (Зависит от Matrix/Identity косвенно)
+      tags: eturnal
+
+    - role: amnezia
+      tags: amnezia
+
+    - role: syncthing
+      tags: syncthing

@@ -44,3 +44,17 @@ livekit_sfu_url = "https://{{ tuwunel_livekit_domain }}/sfu/get"
 # Delayed events для автовыхода из прерванных звонков
 max_event_delay_duration = "24h"
 {% endif %}
+
+{% if tuwunel_ldap_enabled %}
+# LDAP Configuration (Official Structure)
+[global.ldap]
+enable = true
+uri = "{{ tuwunel_ldap_uri }}"
+base_dn = "{{ tuwunel_ldap_base_dn }}"
+bind_dn = "{{ tuwunel_ldap_bind_dn }}"
+bind_password_file = "{{ tuwunel_ldap_bind_password_file }}"
+filter = "{{ tuwunel_ldap_filter }}"
+uid_attribute = "{{ tuwunel_ldap_uid_attribute }}"
+mail_attribute = "{{ tuwunel_ldap_mail_attribute }}"
+name_attribute = "{{ tuwunel_ldap_name_attribute }}"
+{% endif %}
