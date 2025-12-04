@@ -1,9 +1,9 @@
 ---
 - name: Deploy Autoheal
   ansible.builtin.include_role:
-    name: common
+    name: utils
     tasks_from: docker_service
   vars:
-    common_docker_service_name: "{{ autoheal_service_name }}"
-    common_docker_service_dir: "{{ autoheal_compose_dir }}"
-    common_docker_service_compose_template: "{{ playbook_dir }}/roles/autoheal/templates/docker-compose.yml.j2"
+    utils_docker_service_name: "{{ autoheal_service_name }}"
+    utils_docker_service_dir: "{{ autoheal_compose_dir }}"
+    utils_docker_service_compose_template: "{{ playbook_dir }}/roles/autoheal/templates/docker-compose.yml.j2"

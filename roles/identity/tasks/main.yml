@@ -9,18 +9,18 @@
 
 - name: Deploy Identity Stack (Initial)
   ansible.builtin.include_role:
-    name: common
+    name: utils
     tasks_from: docker_service
   vars:
-    common_docker_service_name: "Identity Stack"
-    common_docker_service_dir: "{{ identity_compose_dir }}"
-    common_docker_service_compose_template: "{{ playbook_dir }}/roles/identity/templates/docker-compose.yml.j2"
-    common_docker_service_data_dirs:
+    utils_docker_service_name: "Identity Stack"
+    utils_docker_service_dir: "{{ identity_compose_dir }}"
+    utils_docker_service_compose_template: "{{ playbook_dir }}/roles/identity/templates/docker-compose.yml.j2"
+    utils_docker_service_data_dirs:
       - "{{ identity_data_dir }}/lldap"
       - "{{ identity_data_dir }}/pocketid/data"
       - "{{ identity_data_dir }}/tinyauth"
-    common_docker_service_owner: "{{ default_puid | default('1000') }}"
-    common_docker_service_group: "{{ default_pgid | default('1000') }}"
+    utils_docker_service_owner: "{{ default_puid | default('1000') }}"
+    utils_docker_service_group: "{{ default_pgid | default('1000') }}"
   tags: [deploy, identity]
 
 - name: Wait for LLDAP container to be healthy
@@ -185,12 +185,12 @@
 
 - name: Re-render and Update TinyAuth with new secrets
   ansible.builtin.include_role:
-    name: common
+    name: utils
     tasks_from: docker_service
   vars:
-    common_docker_service_name: "Identity Stack Update"
-    common_docker_service_dir: "{{ identity_compose_dir }}"
-    common_docker_service_compose_template: "{{ playbook_dir }}/roles/identity/templates/docker-compose.yml.j2"
+    utils_docker_service_name: "Identity Stack Update"
+    utils_docker_service_dir: "{{ identity_compose_dir }}"
+    utils_docker_service_compose_template: "{{ playbook_dir }}/roles/identity/templates/docker-compose.yml.j2"
   when: identity_tinyauth_dynamic_secret is defined
   tags: [deploy, identity, bootstrap, magic]
 

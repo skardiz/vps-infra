@@ -18,17 +18,17 @@
 
 - name: Deploy Tuwunel
   ansible.builtin.include_role:
-    name: common
+    name: utils
     tasks_from: docker_service
   vars:
-    common_docker_service_name: "{{ tuwunel_service_name }}"
-    common_docker_service_dir: "{{ tuwunel_compose_dir }}"
-    common_docker_service_data_dirs:
+    utils_docker_service_name: "{{ tuwunel_service_name }}"
+    utils_docker_service_dir: "{{ tuwunel_compose_dir }}"
+    utils_docker_service_data_dirs:
       - "{{ tuwunel_config_dir }}/well-known"
     # Передаем подготовленные списки (или пустые, если условие не сработало)
-    common_docker_service_files: "{{ tuwunel_files | default([]) }}"
-    common_docker_service_ports: "{{ tuwunel_ports | default([]) }}"
-    common_docker_service_templates:
+    utils_docker_service_files: "{{ tuwunel_files | default([]) }}"
+    utils_docker_service_ports: "{{ tuwunel_ports | default([]) }}"
+    utils_docker_service_templates:
       - src: tuwunel.toml.j2
         dest: "{{ tuwunel_config_dir }}/tuwunel.toml"
       - src: livekit.yaml.j2
@@ -37,4 +37,4 @@
         dest: "{{ tuwunel_config_dir }}/well-known/client"
       - src: wellknown_nginx.conf.j2
         dest: "{{ tuwunel_config_dir }}/wellknown_nginx.conf"
-    common_docker_service_compose_template: "{{ playbook_dir }}/roles/tuwunel/templates/docker-compose.yml.j2"
+    utils_docker_service_compose_template: "{{ playbook_dir }}/roles/tuwunel/templates/docker-compose.yml.j2"

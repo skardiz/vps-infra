@@ -1,11 +1,11 @@
 ---
 - name: Deploy Syncthing
   ansible.builtin.include_role:
-    name: common
+    name: utils
     tasks_from: docker_service
   vars:
-    common_docker_service_name: "{{ syncthing_service_name }}"
-    common_docker_service_dir: "{{ syncthing_compose_dir }}"
-    common_docker_service_data_dirs:
+    utils_docker_service_name: "{{ syncthing_service_name }}"
+    utils_docker_service_dir: "{{ syncthing_compose_dir }}"
+    utils_docker_service_data_dirs:
       - "{{ syncthing_data_dir }}"
-    common_docker_service_compose_template: "{{ playbook_dir }}/roles/syncthing/templates/docker-compose.yml.j2"
+    utils_docker_service_compose_template: "{{ playbook_dir }}/roles/syncthing/templates/docker-compose.yml.j2"
