@@ -1,60 +1,5 @@
+# roles/restic/tasks/main.yml
 ---
-- name: Ensure restic directory exists
-  ansible.builtin.file:
-    path: "{{ restic_compose_dir }}"
-    state: directory
-    mode: "0755"
-
-# --- 1. Сборка локального образа ---
-- name: Create directory for Dockerfile
-  ansible.builtin.file:
-    path: "{{ restic_compose_dir }}/build"
-    state: directory
-    mode: "0755"
-
-- name: Create Dockerfile
-  ansible.builtin.copy:
-    dest: "{{ restic_compose_dir }}/build/Dockerfile"
-    content: |
-      FROM restic/restic:latest
-      RUN apk add --no-cache rclone ca-certificates
-    mode: "0644"
-  register: restic_dockerfile
-
-- name: Build local Restic image
-  community.docker.docker_image:
-    name: "{{ restic_image }}"
-    source: build
-    build:
-      path: "{{ restic_compose_dir }}/build"
-      pull: true
-    force_source: "{{ restic_dockerfile.changed }}"
-
-# --- 2. Конфиги и Скрипты ---
-# 🆕 Создаем отдельную папку для конфигов, чтобы монтировать её целиком
-- name: Create config directory
-  ansible.builtin.file:
-    path: "{{ restic_compose_dir }}/config"
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-
-- name: Deploy Rclone config
-  ansible.builtin.copy:
-    content: "{{ restic_rclone_config }}"
-    # 🆕 Кладем конфиг ВНУТРЬ папки config
-    dest: "{{ restic_compose_dir }}/config/rclone.conf"
-    mode: '0600'
-  no_log: true
-
-- name: Deploy Entrypoint script
-  ansible.builtin.template:
-    src: entrypoint.sh.j2
-    dest: "{{ restic_compose_dir }}/entrypoint.sh"
-    mode: '0755'
-
-# --- 3. Деплой контейнера ---
 - name: Deploy Restic Worker Container
   ansible.builtin.include_role:
     name: utils
@@ -63,10 +8,49 @@
     utils_docker_service_name: "{{ restic_service_name }}"
     utils_docker_service_dir: "{{ restic_compose_dir }}"
     utils_docker_service_compose_template: "{{ playbook_dir }}/roles/restic/templates/docker-compose.yml.j2"
+
+    # Не пулим (т.к. локальный) и не стартуем (т.к. worker)
     utils_docker_service_pull_images: false
     utils_docker_service_start: false
 
-# Явно создаем контейнер (чтобы он был в системе), но не запускаем его
+    # Доп. папка для сборки
+    utils_docker_service_data_dirs:
+      - "{{ restic_compose_dir }}/build"
+
+    # Файлы: Dockerfile и Config
+    utils_docker_service_files:
+      - dest: "{{ restic_compose_dir }}/build/Dockerfile"
+        content: |
+          FROM restic/restic:latest
+          RUN apk add --no-cache rclone ca-certificates
+        mode: "0644"
+
+      # Секретный конфиг
+      - dest: "{{ restic_compose_dir }}/config/rclone.conf"
+        content: "{{ restic_rclone_config }}"
+        mode: "0600"
+        owner: root
+        group: root
+        # ВАЖНО: Скрываем этот файл из логов
+        no_log: true
+
+    # Шаблоны: Entrypoint
+    utils_docker_service_templates:
+      - src: entrypoint.sh.j2
+        dest: "{{ restic_compose_dir }}/entrypoint.sh"
+        mode: "0755"
+
+    # СБОРКА ОБРАЗА
+    # Utils соберет его сразу после создания файлов
+    utils_docker_service_build:
+      name: "{{ restic_image }}"
+      path: "{{ restic_compose_dir }}/build"
+      pull: true
+      force: false
+
+# --- Специфичная логика Restic ---
+
+# Инициализация контейнера (create only)
 - name: Create Restic container (initialized but stopped)
   ansible.builtin.command:
     cmd: docker compose up --no-start --remove-orphans
@@ -75,7 +59,7 @@
   changed_when:
     - "'Created' in restic_create_container.stderr or 'Recreated' in restic_create_container.stderr"
 
-# --- 4. Systemd ---
+# Systemd Units
 - name: Deploy Systemd Units
   ansible.builtin.template:
     src: "{{ item }}"
@@ -97,7 +81,7 @@
     - restic-backup.timer
     - restic-check.timer
 
-# 🧹 Уборка: Удаляем старый файл rclone.conf из корня, если он там остался
+# Уборка старого
 - name: Cleanup old rclone.conf
   ansible.builtin.file:
     path: "{{ restic_compose_dir }}/rclone.conf"
