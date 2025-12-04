@@ -27,7 +27,7 @@ services:
       - LLDAP_DATABASE_URL=sqlite:///data/users.db?mode=rwc
       - LLDAP_VERBOSE=false
     volumes:
-      - {{ identity_data_dir }}/lldap:/data
+      - ./data/lldap:/data
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:{{ identity_lldap_port_http }}/health"]
       interval: 10s
@@ -98,7 +98,7 @@ services:
       MAXMIND_LICENSE_KEY: "{{ identity_pocketid_maxmind_license_key }}"
 {% endif %}
     volumes:
-      - {{ identity_data_dir }}/pocketid/data:/app/data
+      - ./data/pocketid/data:/app/data
     healthcheck:
       test: ["CMD", "/app/pocket-id", "healthcheck"]
       interval: 30s
@@ -135,7 +135,7 @@ services:
       pocketid:
         condition: service_healthy
     volumes:
-      - {{ identity_data_dir }}/tinyauth:/app/data
+      - ./data/tinyauth:/app/data
     environment:
       APP_URL: "https://{{ identity_tinyauth_domain }}"
       TRUST_PROXY: "true"

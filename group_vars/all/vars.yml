@@ -2,8 +2,7 @@
 base_domain: "ziix.ru"
 
 # === DOCKER ===
-docker_data_dir: "/srv/docker"
-docker_config_dir: "/opt"
+docker_base_dir: "/srv/docker"
 docker_network_name: "web"
 
 # === ПОЛЬЗОВАТЕЛИ ===

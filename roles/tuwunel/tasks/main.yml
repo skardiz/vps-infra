@@ -1,116 +1,40 @@
+# roles/tuwunel/tasks/main.yml
 ---
-# Directories
-- name: Create tuwunel directories
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    owner: "{{ deploy_user }}"
-    group: "{{ deploy_user }}"
-    mode: "0755"
-  loop:
-    - "{{ tuwunel_compose_dir }}"
-    - "{{ tuwunel_data_dir }}"
-    - "{{ tuwunel_livekit_dir }}"
-  become: true
-  tags: [setup, directories]
-
-- name: Create wellknown directory
-  ansible.builtin.file:
-    path: "{{ tuwunel_data_dir }}/../wellknown"
-    state: directory
-    owner: "{{ deploy_user }}"
-    group: "{{ deploy_user }}"
-    mode: "0755"
-  become: true
-  tags: [setup, directories]
-
-# LDAP Password File (New!)
-- name: Create LDAP bind password file
-  ansible.builtin.copy:
-    content: "{{ tuwunel_ldap_bind_password }}"
-    dest: "{{ tuwunel_compose_dir }}/.ldap_bind_password"
-    owner: "{{ deploy_user }}"
-    group: "{{ deploy_user }}"
-    mode: '0600'
-  become: true
+- name: Prepare LDAP files list
+  ansible.builtin.set_fact:
+    tuwunel_files:
+      - dest: "{{ tuwunel_compose_dir }}/.ldap_bind_password"
+        content: "{{ tuwunel_ldap_bind_password }}"
+        mode: '0600'
   when: tuwunel_ldap_enabled | default(false)
-  tags: [config, tuwunel]
 
-# Tuwunel Config
-- name: Generate tuwunel.toml configuration
-  ansible.builtin.template:
-    src: tuwunel.toml.j2
-    dest: "{{ tuwunel_compose_dir }}/tuwunel.toml"
-    owner: "{{ deploy_user }}"
-    group: "{{ deploy_user }}"
-    mode: "0644"
-  become: true
-  notify: restart tuwunel
-  tags: [config, tuwunel]
+- name: Prepare LiveKit ports list
+  ansible.builtin.set_fact:
+    tuwunel_ports:
+      - { port: "8448", proto: "tcp", comment: "Matrix Federation" }
+      - { port: "{{ tuwunel_livekit_tcp_port }}", proto: "tcp", comment: "LiveKit TCP" }
+      - { port: "{{ tuwunel_livekit_udp_start }}:{{ tuwunel_livekit_udp_end }}", proto: "udp", comment: "LiveKit WebRTC" }
+  when: tuwunel_livekit_enabled | default(false)
 
-# LiveKit Config
-- name: Generate livekit.yaml configuration
-  ansible.builtin.template:
-    src: livekit.yaml.j2
-    dest: "{{ tuwunel_livekit_dir }}/livekit.yaml"
-    owner: "{{ deploy_user }}"
-    group: "{{ deploy_user }}"
-    mode: "0644"
-  become: true
-  when: tuwunel_livekit_enabled
-  notify: restart livekit
-  tags: [config, livekit]
-
-# Well-Known Delegation
-- name: Generate Well-Known JSON
-  ansible.builtin.template:
-    src: wellknown_client.json.j2
-    dest: "{{ tuwunel_data_dir }}/../wellknown/client.json"
-    owner: "{{ deploy_user }}"
-    group: "{{ deploy_user }}"
-    mode: "0644"
-  become: true
-  notify: restart wellknown
-  tags: [config, wellknown]
-
-- name: Generate Well-Known Nginx config
-  ansible.builtin.template:
-    src: wellknown_nginx.conf.j2
-    dest: "{{ tuwunel_data_dir }}/../wellknown/default.conf"
-    owner: "{{ deploy_user }}"
-    group: "{{ deploy_user }}"
-    mode: "0644"
-  become: true
-  notify: restart wellknown
-  tags: [config, wellknown]
-
-# Firewall
-- name: Configure UFW for Matrix and LiveKit ports
-  community.general.ufw:
-    rule: allow
-    port: "{{ item.port }}"
-    proto: "{{ item.proto }}"
-    comment: "{{ item.comment }}"
-  loop:
-    - { port: "8448", proto: "tcp", comment: "Matrix Federation" }
-    - { port: "{{ tuwunel_livekit_tcp_port }}", proto: "tcp", comment: "LiveKit TCP" }
-    - { port: "{{ tuwunel_livekit_udp_start }}:{{ tuwunel_livekit_udp_end }}", proto: "udp", comment: "LiveKit WebRTC" }
-  become: true
-  when: tuwunel_livekit_enabled
-  tags: [firewall, security]
-
-# Deployment
-- name: Deploy tuwunel stack
+- name: Deploy Tuwunel
   ansible.builtin.include_role:
     name: common
     tasks_from: docker_service
   vars:
     common_docker_service_name: "{{ tuwunel_service_name }}"
     common_docker_service_dir: "{{ tuwunel_compose_dir }}"
-    common_docker_service_compose_template: "{{ playbook_dir }}/roles/tuwunel/templates/docker-compose.yml.j2"
     common_docker_service_data_dirs:
-      - "{{ tuwunel_compose_dir }}"
-      - "{{ tuwunel_data_dir }}"
-      - "{{ tuwunel_livekit_dir }}"
-      - "{{ tuwunel_data_dir }}/../wellknown"
-  tags: [deploy, docker]
+      - "{{ tuwunel_config_dir }}/well-known"
+    # Передаем подготовленные списки (или пустые, если условие не сработало)
+    common_docker_service_files: "{{ tuwunel_files | default([]) }}"
+    common_docker_service_ports: "{{ tuwunel_ports | default([]) }}"
+    common_docker_service_templates:
+      - src: tuwunel.toml.j2
+        dest: "{{ tuwunel_config_dir }}/tuwunel.toml"
+      - src: livekit.yaml.j2
+        dest: "{{ tuwunel_config_dir }}/livekit.yaml"
+      - src: wellknown_client.json.j2
+        dest: "{{ tuwunel_config_dir }}/well-known/client"
+      - src: wellknown_nginx.conf.j2
+        dest: "{{ tuwunel_config_dir }}/wellknown_nginx.conf"
+    common_docker_service_compose_template: "{{ playbook_dir }}/roles/tuwunel/templates/docker-compose.yml.j2"

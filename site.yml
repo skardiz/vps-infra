@@ -34,3 +34,6 @@
 
     - role: syncthing
       tags: syncthing
+
+    - role: vaultwarden
+      tags: vaultwarden

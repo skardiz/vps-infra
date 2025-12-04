@@ -1,7 +1,7 @@
 ---
 restic_service_name: "restic"
 restic_image: "local/restic-with-rclone:latest"
-restic_compose_dir: "/opt/restic"
+restic_compose_dir: "{{ docker_base_dir }}/restic"
 
 # --- Расписания ---
 # Бэкап: каждый день в 04:00
@@ -30,7 +30,5 @@ restic_stop_service: "tuwunel"
 
 # --- Пути ---
 restic_mounts:
-  - src: "/opt"
-    dst: "/data/opt"
-  - src: "/srv/docker"
-    dst: "/data/srv_docker"
+  - src: "{{ docker_base_dir }}"
+    dst: "/data"

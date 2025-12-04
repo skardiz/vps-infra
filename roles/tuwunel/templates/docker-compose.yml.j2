@@ -10,12 +10,12 @@ services:
           memory: 384M
 
     volumes:
-      - {{ tuwunel_compose_dir }}/tuwunel.toml:/etc/tuwunel/tuwunel.toml:ro
-      - {{ tuwunel_data_dir }}:/var/lib/tuwunel
+      - ./config/tuwunel.toml:/etc/tuwunel/tuwunel.toml:ro
+      - ./data:/var/lib/tuwunel
       - /etc/localtime:/etc/localtime:ro
 {% if tuwunel_ldap_enabled %}
       # Маунтим секретный файл с паролем LDAP (read-only)
-      - {{ tuwunel_compose_dir }}/.ldap_bind_password:{{ tuwunel_ldap_bind_password_file }}:ro
+      - ./.ldap_bind_password:{{ tuwunel_ldap_bind_password_file }}:ro
 {% endif %}
 
     networks:
@@ -75,8 +75,8 @@ services:
           memory: 64M
 
     volumes:
-      - {{ tuwunel_data_dir }}/../wellknown/client.json:/usr/share/nginx/html/client.json:ro
-      - {{ tuwunel_data_dir }}/../wellknown/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./config/well-known/client:/usr/share/nginx/html/client.json:ro
+      - ./config/wellknown_nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
     networks:
       - {{ tuwunel_docker_network }}
@@ -121,7 +121,7 @@ services:
       - "{{ tuwunel_livekit_udp_start }}-{{ tuwunel_livekit_udp_end }}:{{ tuwunel_livekit_udp_start }}-{{ tuwunel_livekit_udp_end }}/udp"
 
     volumes:
-      - {{ tuwunel_livekit_dir }}/livekit.yaml:/etc/livekit.yaml:ro
+      - ./config/livekit.yaml:/etc/livekit.yaml:ro
       - /etc/localtime:/etc/localtime:ro
 
     healthcheck:

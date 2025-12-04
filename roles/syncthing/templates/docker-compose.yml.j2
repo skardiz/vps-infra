@@ -15,8 +15,8 @@ services:
       TZ: "{{ syncthing_tz }}"
 
     volumes:
-      - "{{ syncthing_data_dir }}/config:/config"
-      - "{{ syncthing_data_dir }}/data:/data"
+      - "./config:/config"
+      - "./data:/data"
 
     ports:
       - "{{ syncthing_tcp_port }}:{{ syncthing_tcp_port }}/tcp"

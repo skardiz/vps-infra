@@ -1,45 +1,99 @@
+# roles/common/tasks/docker_service.yml
 ---
-- name: Validate required variables for docker_service
+- name: Validate required variables
   ansible.builtin.assert:
     that:
       - common_docker_service_name is defined
       - common_docker_service_dir is defined
       - common_docker_service_compose_template is defined
-    fail_msg: "CRITICAL ERROR: '{{ common_docker_service_name | default('Unknown') }}' is missing required variables!"
-  check_mode: false
+    fail_msg: "Missing required variables for {{ common_docker_service_name | default('service') }}"
+    quiet: true
 
-- name: "Ensure directories exist for {{ common_docker_service_name }}"
+# --- NEW: Создаем базовую структуру (Root, Config, Data) ---
+- name: Create service structure for {{ common_docker_service_name }}
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
     owner: "{{ common_docker_service_owner | default(deploy_user) }}"
     group: "{{ common_docker_service_group | default(deploy_user) }}"
     mode: "0755"
-  loop: "{{ [common_docker_service_dir] + (common_docker_service_data_dirs | default([])) }}"
+  # Линтер доволен: разбиваем список на строки
+  loop: "{{
+      [
+        common_docker_service_dir,
+        common_docker_service_dir ~ '/config',
+        common_docker_service_dir ~ '/data'
+      ] + (common_docker_service_data_dirs | default([]))
+    }}"
   become: true
 
-- name: "Render docker-compose.yml for {{ common_docker_service_name }}"
+- name: Create specific files for {{ common_docker_service_name }}
+  ansible.builtin.copy:
+    dest: "{{ item.dest }}"
+    content: "{{ item.content | default('') }}"
+    mode: "{{ item.mode | default('0644') }}"
+    owner: "{{ item.owner | default(deploy_user) }}"
+    group: "{{ item.group | default(deploy_user) }}"
+    force: "{{ item.force | default(true) }}"
+  loop: "{{ common_docker_service_files | default([]) }}"
+  loop_control:
+    label: "{{ item.dest | basename }}"
+  become: true
+  when: common_docker_service_files | default([]) | length > 0
+
+- name: Render config templates for {{ common_docker_service_name }}
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "{{ item.mode | default('0644') }}"
+    owner: "{{ item.owner | default(deploy_user) }}"
+    group: "{{ item.group | default(deploy_user) }}"
+  loop: "{{ common_docker_service_templates | default([]) }}"
+  loop_control:
+    label: "{{ item.dest | basename }}"
+  become: true
+  when: common_docker_service_templates | default([]) | length > 0
+
+- name: Configure UFW for {{ common_docker_service_name }}
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto | default('tcp') }}"
+    comment: "{{ item.comment | default(common_docker_service_name) }}"
+  loop: "{{ common_docker_service_ports | default([]) }}"
+  loop_control:
+    label: "Port {{ item.port }}/{{ item.proto | default('tcp') }}"
+  become: true
+  when: common_docker_service_ports | default([]) | length > 0
+
+- name: Render docker-compose.yml for {{ common_docker_service_name }}
   ansible.builtin.template:
     src: "{{ common_docker_service_compose_template }}"
     dest: "{{ common_docker_service_dir }}/docker-compose.yml"
-    mode: "0644"
+    mode: "0640"
     owner: "{{ deploy_user }}"
-    group: "{{ deploy_user }}"
+    group: docker
   become: true
+  register: common_compose_rendered
 
-- name: "Pull images for {{ common_docker_service_name }}"
+- name: Pull images for {{ common_docker_service_name }}
   community.docker.docker_compose_v2_pull:
     project_src: "{{ common_docker_service_dir }}"
   become: true
   become_user: "{{ deploy_user }}"
-  when: common_docker_service_pull_images | default(true)
+  when:
+    - common_docker_service_pull_images | default(true)
+    - common_compose_rendered.changed or (common_docker_service_force_pull | default(false))
   tags: [pull]
 
-- name: "Start stack for {{ common_docker_service_name }}"
+- name: Deploy stack for {{ common_docker_service_name }}
   community.docker.docker_compose_v2:
     project_src: "{{ common_docker_service_dir }}"
     state: present
     remove_orphans: true
+    wait: "{{ common_docker_service_wait | default(true) }}"
+    wait_timeout: "{{ common_docker_service_wait_timeout | default(120) }}"
   become: true
   become_user: "{{ deploy_user }}"
   when: common_docker_service_start | default(true)
+  register: common_compose_result

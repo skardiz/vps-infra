@@ -10,7 +10,7 @@ services:
           memory: {{ vaultwarden_memory_limit }}
 
     volumes:
-      - {{ vaultwarden_data_dir }}:/data
+      - ./data:/data
 
     networks:
       - {{ vaultwarden_docker_network }}

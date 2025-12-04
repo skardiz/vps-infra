@@ -4,10 +4,13 @@ tuwunel_service_name: "tuwunel"
 tuwunel_livekit_service_name: "livekit"
 tuwunel_jwt_service_name: "lk-jwt-service"
 
+# Directories (Refactored)
+tuwunel_root: "{{ docker_base_dir }}/{{ tuwunel_service_name }}"
+tuwunel_compose_dir: "{{ tuwunel_root }}"
+tuwunel_config_dir: "{{ tuwunel_root }}/config"
+tuwunel_data_dir: "{{ tuwunel_root }}/data"
+
 # Directories
-tuwunel_compose_dir: "{{ docker_config_dir }}/{{ tuwunel_service_name }}"
-tuwunel_data_dir: "{{ docker_data_dir }}/{{ tuwunel_service_name }}"
-tuwunel_livekit_dir: "{{ tuwunel_compose_dir }}/livekit"
 
 # Docker images
 tuwunel_image: "docker.io/jevolk/tuwunel:latest"

@@ -1,30 +1,12 @@
 ---
-- name: Ensure Amnezia directories exist
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-    owner: "{{ deploy_user }}"
-    group: "{{ deploy_user }}"
-    mode: "0755"
-  loop:
-    - "{{ amnezia_data_dir }}"
-    - "{{ amnezia_compose_dir }}"
-  become: true
-
-- name: Render custom Nginx config
-  ansible.builtin.template:
-    src: nginx_default.conf.j2
-    dest: "{{ amnezia_data_dir }}/nginx_default.conf"
-    mode: "0644"
-    owner: "{{ deploy_user }}"
-    group: "{{ deploy_user }}"
-  become: true
-
-- name: Deploy Amnezia Docker
+- name: Deploy AmneziaWG
   ansible.builtin.include_role:
     name: common
     tasks_from: docker_service
   vars:
-    common_docker_service_name: "AmneziaWG"
+    common_docker_service_name: "{{ amnezia_service_name }}"
     common_docker_service_dir: "{{ amnezia_compose_dir }}"
+    common_docker_service_templates:
+      - src: nginx_default.conf.j2
+        dest: "{{ amnezia_config_dir }}/nginx_default.conf"
     common_docker_service_compose_template: "{{ playbook_dir }}/roles/amnezia/templates/docker-compose.yml.j2"

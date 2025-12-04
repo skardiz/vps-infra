@@ -1,12 +1,11 @@
 ---
-- name: Deploy Vaultwarden stack
+- name: Deploy Vaultwarden
   ansible.builtin.include_role:
     name: common
     tasks_from: docker_service
   vars:
     common_docker_service_name: "{{ vaultwarden_service_name }}"
-    common_docker_service_dir: "{{ vaultwarden_base_dir }}"
-    common_docker_service_compose_template: "{{ playbook_dir }}/roles/vaultwarden/templates/docker-compose.yml.j2"
+    common_docker_service_dir: "{{ vaultwarden_compose_dir }}"
     common_docker_service_data_dirs:
       - "{{ vaultwarden_data_dir }}"
-  tags: [deploy, docker, vaultwarden]
+    common_docker_service_compose_template: "{{ playbook_dir }}/roles/vaultwarden/templates/docker-compose.yml.j2"

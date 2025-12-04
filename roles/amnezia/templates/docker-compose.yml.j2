@@ -16,9 +16,8 @@ services:
       DEFAULT_DNS: "{{ amnezia_default_dns }}"
 
     volumes:
-      - "{{ amnezia_data_dir }}:/etc/amnezia"
-      # 🔥 ПОДМЕНА КОНФИГА 🔥
-      - "{{ amnezia_data_dir }}/nginx_default.conf:/etc/nginx/http.d/default.conf"
+      - ./data:/etc/amnezia
+      - ./config/nginx_default.conf:/etc/nginx/http.d/default.conf
 
     ports:
       - "{{ amnezia_wireguard_port }}:{{ amnezia_wireguard_port }}/udp"

@@ -3,8 +3,9 @@
 vaultwarden_service_name: "vaultwarden"
 
 # Directories
-vaultwarden_base_dir: "{{ docker_config_dir }}/{{ vaultwarden_service_name }}"
-vaultwarden_data_dir: "{{ docker_data_dir }}/{{ vaultwarden_service_name }}"
+# Исправили имя переменной с _base_dir на _compose_dir, чтобы совпадало с tasks
+vaultwarden_compose_dir: "{{ docker_base_dir }}/{{ vaultwarden_service_name }}"
+vaultwarden_data_dir: "{{ vaultwarden_compose_dir }}/data"
 
 # Docker images
 vaultwarden_image: "vaultwarden/server:latest"

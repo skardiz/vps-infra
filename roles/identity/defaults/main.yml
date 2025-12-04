@@ -1,7 +1,7 @@
 ---
 identity_service_name: "identity"
-identity_compose_dir: "{{ docker_config_dir }}/{{ identity_service_name }}"
-identity_data_dir: "{{ docker_data_dir }}/{{ identity_service_name }}"
+identity_compose_dir: "{{ docker_base_dir }}/{{ identity_service_name }}"
+identity_data_dir: "{{ identity_compose_dir }}/data"
 
 # ==========================================
 # LLDAP Configuration
@@ -63,3 +63,4 @@ identity_tinyauth_client_secret: "{{ vault_identity.tinyauth.pocketid_client_sec
 # OAuth URLs
 identity_tinyauth_pocketid_public_url: "https://{{ identity_pocketid_domain }}"
 identity_tinyauth_pocketid_internal_url: "http://pocketid:1411"
+identity_config_dir: "{{ identity_compose_dir }}/config"
