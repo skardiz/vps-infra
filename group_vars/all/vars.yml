@@ -42,3 +42,6 @@ turn_relay_port_end: 49200
 tuwunel_enabled: true
 matrix_domain: "matrix.{{ base_domain }}"
 tuwunel_livekit_enabled: true
+
+# Hugo static site
+hugo_enabled: true  # ← ДОБАВЬ ТОЛЬКО ЭТУ СТРОКУ!

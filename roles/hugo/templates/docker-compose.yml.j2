@@ -1,0 +1,54 @@
+version: "3.7"
+
+services:
+  # --- Nginx Service (Web Server) ---
+  {{ hugo_service_name }}:
+    image: nginx:alpine
+    container_name: {{ hugo_service_name }}
+    restart: unless-stopped
+    networks:
+      - {{ hugo_network_name }}
+    volumes:
+      - "{{ hugo_public_dir }}:/usr/share/nginx/html:ro"
+    labels:
+      caddy: "{{ hugo_domain }}"
+      caddy.reverse_proxy: "{{ "{{" }}upstreams 80{{ "}}" }}"
+      caddy.encode: "gzip"
+      caddy.import: "secure-headers"
+      caddy.header.Cache-Control: "public, max-age=3600"
+      
+      # Matrix Delegation
+      caddy.handle_path_0: "/.well-known/matrix/server"
+      caddy.handle_path_0.respond: '{"m.server":"matrix.{{ hugo_domain }}:443"}'
+      caddy.handle_path_0.header: "Content-Type application/json"
+      caddy.handle_path_0.header_0: "Access-Control-Allow-Origin *"
+
+      caddy.handle_path_1: "/.well-known/matrix/client"
+      caddy.handle_path_1.respond: '{"m.homeserver":{"base_url":"https://matrix.{{ hugo_domain }}"},"org.matrix.msc4143.rtc_foci":[{"type":"livekit","livekit_service_url":"https://livekit.{{ hugo_domain }}","jwt_service_url":"https://livekit.{{ hugo_domain }}/sfu/get"}]}'
+      caddy.handle_path_1.header: "Content-Type application/json"
+      caddy.handle_path_1.header_0: "Access-Control-Allow-Origin *"
+
+  # --- Hugo Builder (One-shot) ---
+  {{ hugo_builder_container }}:
+    image: hugomods/hugo:debian-exts
+    container_name: {{ hugo_builder_container }}
+    restart: "no"
+    environment:
+      - HUGO_ENV=production
+    volumes:
+      - "{{ hugo_site_dir }}:/src"
+      - "{{ hugo_public_dir }}:/dest"
+    command: >
+      hugo
+      --destination /dest
+      --cleanDestinationDir
+      --minify
+      --baseURL {{ hugo_base_url }}/
+    networks:
+      - {{ hugo_network_name }}
+    labels:
+      caddy: ""
+
+networks:
+  {{ hugo_network_name }}:
+    external: true

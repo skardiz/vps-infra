@@ -1,0 +1,105 @@
+baseURL = "{{ hugo_base_url }}"
+title = "{{ hugo_title }}"
+theme = "{{ hugo_theme }}"
+languageCode = "en-us"
+defaultContentLanguage = "en"
+
+publishDir = "/dest"
+canonifyURLs = false
+
+enableEmoji = true
+enableGitInfo = true
+
+[pagination]
+  pagerSize = 10
+
+[outputs]
+  home = ["HTML", "RSS", "JSON"]
+
+[sitemap]
+  changefreq = "weekly"
+  filename = "sitemap.xml"
+  priority = 0.5
+
+[imaging]
+  resampleFilter = "CatmullRom"
+  quality = 85
+
+[caches]
+  [caches.getjson]
+    maxAge = "1h"
+
+[markup]
+  [markup.highlight]
+    codeFences = true
+    lineNos = false
+    lineNumbersInTable = true
+    style = "monokai"
+
+  [markup.goldmark]
+    [markup.goldmark.renderer]
+      unsafe = true
+
+[menu]
+  [[menu.main]]
+    name = "Home"
+    url = "/"
+    weight = 1
+
+  [[menu.main]]
+    name = "Posts"
+    url = "/posts/"
+    weight = 2
+
+  [[menu.main]]
+    name = "Tags"
+    url = "/tags/"
+    weight = 3
+
+[params]
+  description = "{{ hugo_description }}"
+  author = "{{ hugo_author }}"
+  dateFormat = "January 2, 2006"
+  
+  # PaperMod settings
+  ShowReadingTime = true
+  ShowShareButtons = true
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = true
+  ShowCodeCopyButtons = true
+  ShowWordCount = true
+  ShowRssButtonInSectionTermList = true
+  UseHugoToc = true
+  disableSpecial1stPost = false
+  disableScrollToTop = false
+  comments = false
+  hidemeta = false
+  hideSummary = false
+  showtoc = true
+  tocopen = false
+
+  [params.homeInfoParams]
+    Title = "Welcome to {{ hugo_title }}"
+    Content = "{{ hugo_description }}"
+
+{% if hugo_social_github %}
+  [[params.socialIcons]]
+    name = "github"
+    url = "{{ hugo_social_github }}"
+{% endif %}
+
+{% if hugo_social_telegram %}
+  [[params.socialIcons]]
+    name = "telegram"
+    url = "{{ hugo_social_telegram }}"
+{% endif %}
+
+{% if hugo_social_email %}
+  [[params.socialIcons]]
+    name = "email"
+    url = "mailto:{{ hugo_social_email }}"
+{% endif %}
+
+  [[params.socialIcons]]
+    name = "rss"
+    url = "/index.xml"

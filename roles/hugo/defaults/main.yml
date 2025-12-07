@@ -1,0 +1,21 @@
+---
+# Имя сервиса и контейнера
+hugo_service_name: hugo
+hugo_builder_container: hugo-builder
+
+# Пути (используем стандартный путь для Docker томов)
+hugo_base_dir: /srv/docker/{{ hugo_service_name }}
+hugo_site_dir: "{{ hugo_base_dir }}/site"
+hugo_public_dir: "/srv/docker/shared/{{ hugo_service_name }}"
+
+# Git репозиторий (твой новый репо)
+# ВАЖНО: Если репо приватный, используй URL с токеном: https://TOKEN@github.com/...
+hugo_repo: "https://github.com/ziix-ru/blog.git"
+hugo_repo_version: "main"
+
+# Docker Network (сеть, где живет Caddy)
+hugo_network_name: "web"
+
+# Домен
+hugo_domain: "ziix.ru"
+hugo_base_url: "https://{{ hugo_domain }}"

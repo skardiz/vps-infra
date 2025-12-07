@@ -43,3 +43,6 @@
 
     - role: dozzle
       tags: dozzle
+
+    - role: hugo
+      tags: hugo

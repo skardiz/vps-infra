@@ -1,0 +1,83 @@
+---
+- name: Ensure Hugo directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    # Используем твоего юзера для владения папками (обычно это тот, под кем ходит Ansible)
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+  loop:
+    - "{{ hugo_base_dir }}"
+    - "{{ hugo_site_dir }}"
+    - "{{ hugo_public_dir }}"
+
+- name: Fix permissions for Site Directory (Pre-Clone)
+  # Убеждаемся, что у нас есть права писать в папку сайта перед клонированием
+  file:
+    path: "{{ hugo_site_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+    recurse: yes
+
+- name: Clone Hugo Repository
+  git:
+    repo: "{{ hugo_repo }}"
+    dest: "{{ hugo_site_dir }}"
+    version: "{{ hugo_repo_version }}"
+    force: yes
+    update: yes
+    # Если репо публичный - recursive работает. Если приватный с подмодулями - могут быть нюансы.
+    recursive: yes
+
+- name: Ensure theme submodules are updated (Safety net)
+  # На случай, если git module update не сработал
+  command: "git submodule update --init --recursive"
+  args:
+    chdir: "{{ hugo_site_dir }}"
+  ignore_errors: yes
+
+- name: Fix permissions BEFORE build (For Builder)
+  # Билдеру нужны права на чтение/запись
+  # 1000:1000 - стандартный UID первого юзера (обычно совпадает с ansible_user)
+  command: "chown -R 1000:1000 {{ hugo_site_dir }}"
+  become: yes
+
+- name: Deploy Hugo Stack
+  block:
+    - name: Deploy stack using utils role
+      include_role:
+        name: utils
+        tasks_from: docker_service
+      vars:
+        utils_docker_service_name: "{{ hugo_service_name }}"
+        utils_docker_service_compose_template: "docker-compose.yml.j2"
+        # Указываем путь к папке сервиса
+        utils_docker_service_dir: "{{ hugo_base_dir }}"
+        # Переменную сети не передаем в vars, она берется из defaults
+
+  rescue:
+    - name: Check if builder exited successfully (Exit Code 0 is OK)
+      debug:
+        msg: "Builder container exited. This is normal for Hugo if ExitCode is 0."
+
+    - name: Fix permissions AFTER build (For Nginx)
+      # Критически важно для 403 ошибки: Nginx должен уметь читать сгенерированные файлы
+      file:
+        path: "{{ hugo_public_dir }}"
+        state: directory
+        mode: '0755'
+        recurse: yes
+      become: yes
+
+    - name: Verify Nginx is running
+      # Экранируем {{.Status}} для Ansible
+      command: "docker ps -f name={{ hugo_service_name }} -f status=running --format '{{ '{{' }}.Status{{ '}}' }}'"
+      register: nginx_status
+      failed_when: nginx_status.stdout == ""
+
+    - name: Success message
+      debug:
+        msg: "Hugo site deployed successfully via Nginx!"
