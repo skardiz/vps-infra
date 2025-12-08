@@ -1,23 +1,53 @@
 ---
-- name: Deploy Caddy Proxy
-  ansible.builtin.include_role:
-    name: utils
-    tasks_from: docker_service
-  vars:
-    utils_docker_service_name: "{{ caddy_service_name }}"
-    utils_docker_service_dir: "{{ caddy_compose_dir }}"
-    utils_docker_service_compose_template: "{{ playbook_dir }}/roles/caddy/templates/docker-compose.yml.j2"
+- name: Ensure Caddy directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0755"
+  loop:
+    - "{{ caddy_compose_dir }}"
+    - "{{ caddy_config_dir }}"
+    - "{{ caddy_data_dir }}"
 
-    # [ Config & Build Files ]
-    utils_docker_service_templates:
-      - src: Dockerfile.j2
-        dest: "{{ caddy_compose_dir }}/Dockerfile"
-      - src: Caddyfile.j2
-        dest: "{{ caddy_config_dir }}/Caddyfile"
+- name: Render Caddyfile & Dockerfile
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0644"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+  loop:
+    - { src: "Caddyfile.j2", dest: "{{ caddy_config_dir }}/Caddyfile" }
+    - { src: "Dockerfile.j2", dest: "{{ caddy_compose_dir }}/Dockerfile" }
+  register: caddy_configs
 
-    # [ Build Strategy ]
-    utils_docker_service_build:
-      name: "{{ caddy_service_name }}:local"
+- name: Render docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ caddy_compose_dir }}/docker-compose.yml"
+    mode: "0640"
+    owner: "{{ deploy_user }}"
+    group: docker
+  register: caddy_compose
+
+- name: Build Caddy Image
+  community.docker.docker_image:
+    name: "{{ caddy_service_name }}:local"
+    source: build
+    build:
       path: "{{ caddy_compose_dir }}"
       pull: true
-      force: false
+    # Пересобираем, если изменился Dockerfile
+    force_source: "{{ caddy_configs.changed }}"
+
+- name: Deploy Caddy Stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ caddy_compose_dir }}"
+    state: present
+    # Pull не нужен, так как образ локальный
+    pull: never
+    remove_orphans: true
+  become: true
+  become_user: "{{ deploy_user }}"

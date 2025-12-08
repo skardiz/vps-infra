@@ -7,22 +7,41 @@
     fail_msg: "CRITICAL: Missing basic Vault secrets for LLDAP!"
   tags: [deploy, identity, check]
 
-- name: Deploy Identity Stack (Initial)
-  ansible.builtin.include_role:
-    name: utils
-    tasks_from: docker_service
-  vars:
-    utils_docker_service_name: "Identity Stack"
-    utils_docker_service_dir: "{{ identity_compose_dir }}"
-    utils_docker_service_compose_template: "{{ playbook_dir }}/roles/identity/templates/docker-compose.yml.j2"
-    utils_docker_service_data_dirs:
-      - "{{ identity_data_dir }}/lldap"
-      - "{{ identity_data_dir }}/pocketid/data"
-      - "{{ identity_data_dir }}/tinyauth"
-    utils_docker_service_owner: "{{ default_puid | default('1000') }}"
-    utils_docker_service_group: "{{ default_pgid | default('1000') }}"
+# 1. Создание структуры папок
+- name: Ensure Identity directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ default_puid | default('1000') }}"
+    group: "{{ default_pgid | default('1000') }}"
+    mode: "0755"
+  loop:
+    - "{{ identity_compose_dir }}"
+    - "{{ identity_data_dir }}/lldap"
+    - "{{ identity_data_dir }}/pocketid/data"
+    - "{{ identity_data_dir }}/tinyauth"
+
+# 2. Рендеринг Compose
+- name: Render docker-compose.yml (Initial)
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ identity_compose_dir }}/docker-compose.yml"
+    mode: "0640"
+    owner: "{{ deploy_user }}"
+    group: docker
+
+# 3. Запуск Стека
+- name: Deploy Identity Stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ identity_compose_dir }}"
+    state: present
+    pull: always
+    remove_orphans: true
+  become: true  # <--- ДОБАВЛЕНО
+  become_user: "{{ deploy_user }}"
   tags: [deploy, identity]
 
+# 4. Проверка здоровья LLDAP
 - name: Wait for LLDAP container to be healthy
   ansible.builtin.command:
     cmd: docker inspect --format='{{ '{{' }}.State.Health.Status{{ '}}' }}' lldap
@@ -33,6 +52,7 @@
   changed_when: false
   tags: [deploy, identity, bootstrap]
 
+# 5. Инициализация LLDAP (Bootstrap Admin)
 - name: Bootstrap LLDAP admin attributes
   ansible.builtin.shell:
     cmd: |
@@ -64,6 +84,7 @@
   changed_when: identity_lldap_bootstrap.rc == 0
   failed_when: identity_lldap_bootstrap.rc != 0
   no_log: false
+  # При изменении аттрибутов админа стоит пнуть PocketID, чтобы он перечитал LDAP
   notify: Restart PocketID for LDAP sync
   tags: [deploy, identity, bootstrap]
 
@@ -84,7 +105,7 @@
   changed_when: false
   tags: [deploy, identity, bootstrap]
 
-# 🤖 ULTRA-AUTOMATION: Auto-configure OIDC (FORCE SECRET GEN)
+# 6. Магия авто-настройки OIDC (PocketID -> TinyAuth)
 - name: "⚡ AUTO-SETUP: Setup API Key & OIDC Client via One-Time Token"
   ansible.builtin.shell:
     cmd: |
@@ -183,18 +204,26 @@
   when: identity_tinyauth_dynamic_secret is defined
   tags: [deploy, identity, bootstrap, magic]
 
-- name: Re-render and Update TinyAuth with new secrets
-  ansible.builtin.include_role:
-    name: utils
-    tasks_from: docker_service
-  vars:
-    utils_docker_service_name: "Identity Stack Update"
-    utils_docker_service_dir: "{{ identity_compose_dir }}"
-    utils_docker_service_compose_template: "{{ playbook_dir }}/roles/identity/templates/docker-compose.yml.j2"
+# 7. Обновление TinyAuth (если секреты поменялись)
+- name: Re-render docker-compose.yml with new secrets
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ identity_compose_dir }}/docker-compose.yml"
+    mode: "0640"
+    owner: "{{ deploy_user }}"
+    group: docker
   when: identity_tinyauth_dynamic_secret is defined
   tags: [deploy, identity, bootstrap, magic]
 
-# Новый таск: Генерируем и показываем свежую ссылку для входа
+- name: Restart TinyAuth with new config
+  community.docker.docker_container:
+    name: tinyauth
+    state: started
+    restart: true
+  when: identity_tinyauth_dynamic_secret is defined
+  tags: [deploy, identity, bootstrap, magic]
+
+# 8. Генерация ссылки для админа
 - name: Generate Fresh One-Time Login Link for Admin
   ansible.builtin.command:
     cmd: docker exec pocketid /app/pocket-id one-time-access-token {{ identity_lldap_admin_dn }}

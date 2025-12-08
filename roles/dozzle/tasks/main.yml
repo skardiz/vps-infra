@@ -1,10 +1,25 @@
 ---
-- name: Deploy Dozzle Service
-  ansible.builtin.include_role:
-    name: utils
-    tasks_from: docker_service
-  vars:
-    utils_docker_service_name: "{{ dozzle_service_name }}"
-    utils_docker_service_dir: "{{ dozzle_compose_dir }}"
-    utils_docker_service_compose_template: "{{ playbook_dir }}/roles/{{ dozzle_service_name }}/templates/docker-compose.yml.j2"
-    utils_docker_service_templates: []
+- name: Ensure Dozzle directories exist
+  ansible.builtin.file:
+    path: "{{ dozzle_compose_dir }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0755"
+
+- name: Render docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ dozzle_compose_dir }}/docker-compose.yml"
+    mode: "0640"
+    owner: "{{ deploy_user }}"
+    group: docker
+
+- name: Deploy Dozzle Stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ dozzle_compose_dir }}"
+    state: present
+    pull: always
+    remove_orphans: true
+  become: true
+  become_user: "{{ deploy_user }}"

@@ -1,0 +1,25 @@
+namespace: ziix
+name: infra
+version: 1.0.0
+readme: README.md
+authors:
+  - ziix-ru
+description: "Ansible collection for deploying self-hosted stack (Matrix, Identity) on VPS"
+license:
+  - MIT
+tags:
+  - selfhosted
+  - docker
+repository: https://github.com/ziix-ru/infra
+
+# Исключаем личные данные из сборки коллекции
+build_ignore:
+  - .gitignore
+  - .git
+  - .github
+  - inventory
+  - playbooks
+  - .vault_password
+  - install-collections.yml
+  - requirements.yml
+  - ansible.cfg

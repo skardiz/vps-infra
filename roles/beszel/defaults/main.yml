@@ -1,0 +1,50 @@
+---
+# [ Service Identity ]
+beszel_service_name: "beszel"
+beszel_hub_container: "beszel-hub"
+beszel_agent_container: "beszel-agent"
+
+# [ Images ]
+beszel_hub_image: "henrygd/beszel"
+beszel_hub_tag: "{{ docker_image_tag | default('latest') }}"
+beszel_agent_image: "henrygd/beszel-agent"
+beszel_agent_tag: "{{ docker_image_tag | default('latest') }}"
+
+# [ Paths ]
+beszel_root: "{{ docker_base_dir }}/{{ beszel_service_name }}"
+beszel_hub_data: "{{ beszel_root }}/hub_data"
+beszel_agent_data: "{{ beszel_root }}/agent_data"
+
+# [ Network ]
+beszel_domain: "mon.{{ base_domain }}"
+beszel_port: 8090
+beszel_network: "{{ docker_network_name }}"
+beszel_agent_port: 45876
+
+# [ External Dependencies ]
+beszel_identity_domain: "auth.{{ base_domain }}"
+beszel_lldap_admin_dn: "admin"
+
+# [ Configuration ]
+beszel_restart_policy: "{{ docker_restart_policy | default('unless-stopped') }}"
+beszel_timezone: "{{ docker_timezone | default('Europe/Moscow') }}"
+
+# [ Secrets from Vault ]
+# Внимание: здесь я также обновил ссылку на vault_beszel (потребуется правка vault.yml, см. ниже)
+beszel_agent_key: "{{ vault_beszel.agent_key | default('') }}"
+beszel_agent_token: "{{ vault_beszel.agent_token | default('') }}"
+
+beszel_admin_email: "{{ vault_beszel.admin_email | default('') }}"
+beszel_admin_password: "{{ vault_beszel.admin_password | default('') }}"
+
+beszel_client_id: "{{ vault_beszel.client_id | default('') }}"
+beszel_client_secret: "{{ vault_beszel.client_secret | default('') }}"
+
+# [ Resources ]
+beszel_hub_memory: "{{ docker_memory_limit | default('128M') }}"
+beszel_agent_memory: "64M"
+
+# [ Healthcheck Strategy ]
+beszel_hc_interval: "{{ docker_hc_interval | default('30s') }}"
+beszel_hc_timeout: "{{ docker_hc_timeout | default('5s') }}"
+beszel_hc_retries: "{{ docker_hc_retries | default(3) }}"

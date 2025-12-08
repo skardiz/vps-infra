@@ -1,13 +1,39 @@
 ---
-- name: Deploy AmneziaWG
-  ansible.builtin.include_role:
-    name: utils
-    tasks_from: docker_service
-  vars:
-    utils_docker_service_name: "{{ amnezia_service_name }}"
-    utils_docker_service_dir: "{{ amnezia_compose_dir }}"
-    utils_docker_service_compose_template: "{{ playbook_dir }}/roles/amnezia/templates/docker-compose.yml.j2"
+- name: Ensure Amnezia directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0755"
+  loop:
+    - "{{ amnezia_compose_dir }}"
+    - "{{ amnezia_config_dir }}"
+    - "{{ amnezia_data_dir }}"
 
-    utils_docker_service_templates:
-      - src: nginx_default.conf.j2
-        dest: "{{ amnezia_config_dir }}/nginx_default.conf"
+- name: Render Nginx config
+  ansible.builtin.template:
+    src: nginx_default.conf.j2
+    dest: "{{ amnezia_config_dir }}/nginx_default.conf"
+    mode: "0644"
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+  notify: Restart Amnezia
+
+- name: Render docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ amnezia_compose_dir }}/docker-compose.yml"
+    mode: "0640"
+    owner: "{{ deploy_user }}"
+    group: docker
+  notify: Restart Amnezia
+
+- name: Deploy AmneziaWG Stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ amnezia_compose_dir }}"
+    state: present
+    pull: always
+    remove_orphans: true
+  become: true
+  become_user: "{{ deploy_user }}"

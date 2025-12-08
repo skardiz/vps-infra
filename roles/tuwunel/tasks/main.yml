@@ -1,35 +1,66 @@
 ---
-- name: Prepare LDAP files list
-  ansible.builtin.set_fact:
-    tuwunel_files:
-      - dest: "{{ tuwunel_compose_dir }}/.ldap_bind_password"
-        content: "{{ tuwunel_ldap_bind_password }}"
-        mode: '0600'
+# 1. Папки
+- name: Ensure Tuwunel directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0755"
+  loop:
+    - "{{ tuwunel_compose_dir }}"
+    - "{{ tuwunel_config_dir }}"
+    - "{{ tuwunel_data_dir }}"
+
+# 2. Секреты (LDAP Password)
+- name: Create LDAP Bind Password file
+  ansible.builtin.copy:
+    dest: "{{ tuwunel_compose_dir }}/.ldap_bind_password"
+    content: "{{ tuwunel_ldap_bind_password }}"
+    mode: '0600'
+    owner: "{{ deploy_user }}"
+  no_log: true
   when: tuwunel_ldap_enabled | default(false)
 
-- name: Prepare LiveKit ports list
-  ansible.builtin.set_fact:
-    tuwunel_ports:
-      - { port: "8448", proto: "tcp", comment: "Matrix Federation" }
-      - { port: "{{ tuwunel_livekit_tcp_port }}", proto: "tcp", comment: "LiveKit TCP" }
-      - { port: "{{ tuwunel_livekit_udp_start }}:{{ tuwunel_livekit_udp_end }}", proto: "udp", comment: "LiveKit WebRTC" }
+# 3. Конфиги (Tuwunel & LiveKit)
+- name: Render Configs
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0644"
+    owner: "{{ deploy_user }}"
+  loop:
+    - { src: "tuwunel.toml.j2", dest: "{{ tuwunel_config_dir }}/tuwunel.toml" }
+    - { src: "livekit.yaml.j2", dest: "{{ tuwunel_config_dir }}/livekit.yaml" }
+  notify: Restart Tuwunel
 
-- name: Deploy Tuwunel
-  ansible.builtin.include_role:
-    name: utils
-    tasks_from: docker_service
-  vars:
-    utils_docker_service_name: "{{ tuwunel_service_name }}"
-    utils_docker_service_dir: "{{ tuwunel_compose_dir }}"
-    utils_docker_service_data_dirs: []
+# 4. UFW (Firewall)
+- name: Configure UFW for Matrix & LiveKit
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    comment: "{{ item.comment }}"
+  loop:
+    - { port: "8448", proto: "tcp", comment: "Matrix Federation" }
+    - { port: "{{ tuwunel_livekit_tcp_port }}", proto: "tcp", comment: "LiveKit TCP" }
+    - { port: "{{ tuwunel_livekit_udp_start }}:{{ tuwunel_livekit_udp_end }}", proto: "udp", comment: "LiveKit WebRTC" }
 
-    utils_docker_service_files: "{{ tuwunel_files | default([]) }}"
-    utils_docker_service_ports: "{{ tuwunel_ports | default([]) }}"
+# 5. Docker Compose
+- name: Render docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ tuwunel_compose_dir }}/docker-compose.yml"
+    mode: "0640"
+    owner: "{{ deploy_user }}"
+    group: docker
+  notify: Restart Tuwunel
 
-    utils_docker_service_templates:
-      - src: tuwunel.toml.j2
-        dest: "{{ tuwunel_config_dir }}/tuwunel.toml"
-      - src: livekit.yaml.j2
-        dest: "{{ tuwunel_config_dir }}/livekit.yaml"
-
-    utils_docker_service_compose_template: "{{ playbook_dir }}/roles/tuwunel/templates/docker-compose.yml.j2"
+- name: Deploy Tuwunel Stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ tuwunel_compose_dir }}"
+    state: present
+    pull: always
+    remove_orphans: true
+  become: true
+  become_user: "{{ deploy_user }}"

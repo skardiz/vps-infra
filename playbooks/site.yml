@@ -1,0 +1,49 @@
+---
+- name: Configure VPS with base packages, Docker, Traefik and services
+  hosts: vps
+  become: true
+
+  # ВАЖНО: Используем FQCN (Fully Qualified Collection Name)
+  roles:
+    # 1. База
+    - role: ziix.infra.common
+      tags: common
+
+    - role: ziix.infra.docker
+      tags: docker
+
+    # 2. Безопасность и Аутентификация
+    - role: ziix.infra.identity
+      tags: identity
+
+    # 3. Инфраструктура
+    - role: ziix.infra.caddy
+      tags: caddy
+
+    - role: ziix.infra.autoheal
+      tags: autoheal
+
+    - role: ziix.infra.restic
+      tags: restic
+
+    # 4. Прикладные сервисы
+    - role: ziix.infra.tuwunel
+      tags: tuwunel
+
+    - role: ziix.infra.amnezia
+      tags: amnezia
+
+    - role: ziix.infra.syncthing
+      tags: syncthing
+
+    - role: ziix.infra.vaultwarden
+      tags: vaultwarden
+
+    - role: ziix.infra.beszel
+      tags: beszel
+
+    - role: ziix.infra.dozzle
+      tags: dozzle
+
+    - role: ziix.infra.hugo
+      tags: hugo

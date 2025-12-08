@@ -1,9 +1,25 @@
 ---
-- name: Deploy Autoheal
-  ansible.builtin.include_role:
-    name: utils
-    tasks_from: docker_service
-  vars:
-    utils_docker_service_name: "{{ autoheal_service_name }}"
-    utils_docker_service_dir: "{{ autoheal_compose_dir }}"
-    utils_docker_service_compose_template: "{{ playbook_dir }}/roles/autoheal/templates/docker-compose.yml.j2"
+- name: Ensure Autoheal directories exist
+  ansible.builtin.file:
+    path: "{{ autoheal_compose_dir }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0755"
+
+- name: Render docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ autoheal_compose_dir }}/docker-compose.yml"
+    mode: "0640"
+    owner: "{{ deploy_user }}"
+    group: docker
+
+- name: Deploy Autoheal Stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ autoheal_compose_dir }}"
+    state: present
+    pull: always
+    remove_orphans: true
+  become: true
+  become_user: "{{ deploy_user }}"

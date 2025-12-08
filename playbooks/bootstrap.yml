@@ -4,4 +4,4 @@
   become: yes
 
   roles:
-    - bootstrap
+    - ziix.infra.bootstrap

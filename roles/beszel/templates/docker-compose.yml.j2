@@ -1,0 +1,74 @@
+services:
+  # 1. Beszel Hub
+  hub:
+    image: "{{ beszel_hub_image }}:{{ beszel_hub_tag }}"
+    container_name: "{{ beszel_hub_container }}"
+    restart: "{{ beszel_restart_policy }}"
+
+    deploy:
+      resources:
+        limits:
+          memory: {{ beszel_hub_memory }}
+
+    environment:
+      TZ: "{{ beszel_timezone }}"
+      APP_URL: "https://{{ beszel_domain }}"
+
+      # --- [ Auto-Setup Admin ] ---
+      USER_EMAIL: "{{ beszel_admin_email }}"
+      USER_PASSWORD: "{{ beszel_admin_password }}"
+      USER_CREATION: "true"
+
+    volumes:
+      - "{{ beszel_hub_data }}:/beszel_data"
+
+    networks:
+      - {{ beszel_network }}
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    healthcheck:
+      test: ["CMD", "/beszel", "health"]
+      interval: {{ beszel_hc_interval }}
+      timeout: {{ beszel_hc_timeout }}
+      retries: {{ beszel_hc_retries }}
+
+    labels:
+      caddy: "{{ beszel_domain }}"
+      caddy.import: "secure-headers"
+      caddy.reverse_proxy: "{{ beszel_hub_container }}:8090"
+
+
+  # 2. Beszel Agent (Active Mode)
+  agent:
+    image: "{{ beszel_agent_image }}:{{ beszel_agent_tag }}"
+    container_name: "{{ beszel_agent_container }}"
+    restart: "{{ beszel_restart_policy }}"
+    network_mode: host
+
+    deploy:
+      resources:
+        limits:
+          memory: {{ beszel_agent_memory }}
+
+    environment:
+      # Agent Key (Dynamic from API or fallback to Vault)
+      KEY: "{{ beszel_dynamic_key | default(beszel_agent_key) }}"
+
+      # Active Mode: Hub URL + Token
+      HUB_URL: "https://{{ beszel_domain }}"
+
+      # Token (User-Scoped, retrieved via API)
+      TOKEN: "{{ beszel_dynamic_token | default('') }}"
+
+      # Mount point for root filesystem monitoring
+      FILESYSTEM: "/extra-filesystems/root"
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /:/extra-filesystems/root:ro
+
+networks:
+  {{ beszel_network }}:
+    external: true

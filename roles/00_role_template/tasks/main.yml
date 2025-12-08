@@ -1,14 +1,14 @@
 ---
 - name: Deploy Template Service
   ansible.builtin.include_role:
-    name: utils
+    name: ziix.infra.utils
     tasks_from: docker_service
   vars:
     utils_docker_service_name: "{{ template_service_name }}"
     utils_docker_service_dir: "{{ template_compose_dir }}"
 
     # [ TEMPLATE: IMAGE ONLY ]
-    utils_docker_service_compose_template: "{{ playbook_dir }}/roles/{{ template_service_name }}/templates/docker-compose.yml.j2"
+    utils_docker_service_compose_template: "{{ role_path }}/templates/docker-compose.yml.j2"
 
     # [ Config & Build Files ]
     utils_docker_service_templates:
