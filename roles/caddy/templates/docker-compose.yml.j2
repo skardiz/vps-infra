@@ -18,21 +18,26 @@ services:
       - "{{ caddy_port_https }}:443/udp"
 
     environment:
+{% if caddy_use_socket_proxy %}
+      DOCKER_HOST: "{{ caddy_docker_host }}"
+{% endif %}
       CADDY_INGRESS_NETWORKS: "{{ caddy_docker_network }}"
       CADDY_DOCKER_CADDYFILE_PATH: "/config/Caddyfile"
       ACME_EMAIL: "{{ caddy_acme_email }}"
       TZ: "{{ caddy_timezone }}"
 
     volumes:
+{% if not caddy_use_socket_proxy %}
       - /var/run/docker.sock:/var/run/docker.sock:ro
+{% endif %}
       - "{{ caddy_data_dir }}:/data"
       - "{{ caddy_config_dir }}:/config"
 
     networks:
       - {{ caddy_docker_network }}
 
-    # [ GLOBAL SNIPPETS DEFINITION ]
     labels:
+      # Security headers snippet
       caddy_0: "(secure-headers)"
       caddy_0.header.Strict-Transport-Security: "\"max-age=31536000; includeSubDomains\""
       caddy_0.header.X-Content-Type-Options: "nosniff"

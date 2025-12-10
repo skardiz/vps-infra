@@ -32,8 +32,8 @@ services:
       DOCKER_HOST: "{{ dozzle_docker_host }}"
 {% endif %}
 
-    volumes:
 {% if not dozzle_use_socket_proxy %}
+    volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 {% endif %}
 
@@ -50,26 +50,19 @@ services:
 {% endif %}
 
     labels:
-      # === CADDY CONFIGURATION ===
       caddy: "{{ dozzle_domain }}"
       caddy.import: "secure-headers"
 
 {% if dozzle_auth_enabled %}
-      # Auth via TinyAuth (Forward Auth)
-      # Important: 'route' ensures auth is checked BEFORE proxying
       caddy.route: ""
       caddy.route.0_forward_auth: "tinyauth:3000"
       caddy.route.0_forward_auth.uri: "/api/auth/caddy"
       caddy.route.0_forward_auth.copy_headers: "Remote-User Remote-Name Remote-Email Remote-Groups"
-
-      # Proxy to Dozzle UI
       caddy.route.1_reverse_proxy: "{{ dozzle_service_name }}:{{ dozzle_port }}"
 {% else %}
-      # Direct proxy without auth (NOT RECOMMENDED FOR PRODUCTION)
       caddy.reverse_proxy: "{{ dozzle_service_name }}:{{ dozzle_port }}"
 {% endif %}
 
-      # === AUTOHEAL ===
       autoheal: "true"
 
 networks:

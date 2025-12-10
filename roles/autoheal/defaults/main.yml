@@ -1,3 +1,4 @@
+---
 # [ Service Identity ]
 autoheal_service_name: "autoheal"
 autoheal_container_name: "{{ autoheal_service_name }}"
@@ -23,3 +24,13 @@ autoheal_hc_interval: "{{ docker_hc_interval | default('30s') }}"
 autoheal_hc_timeout: "{{ docker_hc_timeout | default('5s') }}"
 autoheal_hc_retries: "{{ docker_hc_retries | default(3) }}"
 autoheal_hc_start_period: "{{ docker_hc_start_period | default('10s') }}"
+
+# [ Network ]
+autoheal_docker_network: "{{ docker_network_name }}"
+
+# [ Socket Proxy Integration ]
+autoheal_use_socket_proxy: "{{ use_socket_proxy | default(false) }}"
+autoheal_docker_host: >-
+  {{ 'tcp://docker-socket-proxy:2375'
+     if autoheal_use_socket_proxy
+     else 'unix:///var/run/docker.sock' }}

@@ -1,0 +1,50 @@
+services:
+  {{ socket_proxy_service_name }}:
+    image: "{{ socket_proxy_image }}:{{ socket_proxy_tag }}"
+    container_name: "{{ socket_proxy_container_name }}"
+    restart: unless-stopped
+
+    # nobody (65534) + GID группы docker хоста (безопасно, non-root)
+    user: "65534:{{ socket_proxy_docker_gid }}"
+
+    read_only: true
+
+    deploy:
+      resources:
+        limits:
+          memory: {{ socket_proxy_memory_limit }}
+
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+    command:
+      - "-loglevel=info"
+      - "-listenip=0.0.0.0"
+      - "-allowfrom={{ socket_proxy_allow_from }}"
+      - "-allowGET={{ socket_proxy_allow_get_pattern }}"
+      - "-allowPOST={{ socket_proxy_allow_post_pattern }}"
+      - "-allowHEAD={{ socket_proxy_allow_head_pattern }}"
+      - "-watchdoginterval={{ socket_proxy_watchdog_interval }}"
+      - "-stoponwatchdog"
+      - "-shutdowngracetime={{ socket_proxy_shutdown_grace }}"
+{% if socket_proxy_allow_healthcheck | bool %}
+      - "-allowhealthcheck"
+{% endif %}
+
+    networks:
+      - {{ socket_proxy_network }}
+
+    healthcheck:
+      test: ["CMD", "./healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  {{ socket_proxy_network }}:
+    external: true

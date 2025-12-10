@@ -15,10 +15,18 @@ services:
       AUTOHEAL_START_PERIOD: "{{ autoheal_start_period }}"
       AUTOHEAL_DEFAULT_STOP_TIMEOUT: "{{ autoheal_stop_timeout }}"
       TZ: "{{ autoheal_timezone }}"
+{% if autoheal_use_socket_proxy %}
+      DOCKER_SOCK: "{{ autoheal_docker_host }}"
+{% endif %}
 
     volumes:
+{% if not autoheal_use_socket_proxy %}
       - /var/run/docker.sock:/var/run/docker.sock
+{% endif %}
       - /etc/localtime:/etc/localtime:ro
+
+    networks:
+      - {{ autoheal_docker_network }}
 
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f autoheal || exit 1"]
@@ -26,3 +34,7 @@ services:
       timeout: {{ autoheal_hc_timeout }}
       retries: {{ autoheal_hc_retries }}
       start_period: {{ autoheal_hc_start_period }}
+
+networks:
+  {{ autoheal_docker_network }}:
+    external: true

@@ -1,3 +1,12 @@
 {
     email {{ caddy_acme_email }}
+    
+    # Включаем HTTP/3 явно и настраиваем порядок лисенеров
+    servers :443 {
+        protocols h1 h2 h3
+        listener_wrappers {
+            http_redirect
+            tls
+        }
+    }
 }

@@ -32,3 +32,10 @@ caddy_hc_interval: "{{ docker_hc_interval | default('30s') }}"
 caddy_hc_timeout: "{{ docker_hc_timeout | default('5s') }}"
 caddy_hc_retries: "{{ docker_hc_retries | default(3) }}"
 caddy_hc_start_period: "{{ docker_hc_start_period | default('10s') }}"
+
+# [ Socket Proxy Integration ]
+caddy_use_socket_proxy: "{{ use_socket_proxy | default(false) }}"
+caddy_docker_host: >-
+  {{ 'tcp://docker-socket-proxy:2375'
+     if caddy_use_socket_proxy
+     else 'unix:///var/run/docker.sock' }}

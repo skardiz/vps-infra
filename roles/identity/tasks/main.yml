@@ -215,11 +215,15 @@
   when: identity_tinyauth_dynamic_secret is defined
   tags: [deploy, identity, bootstrap, magic]
 
-- name: Restart TinyAuth with new config
-  community.docker.docker_container:
-    name: tinyauth
-    state: started
-    restart: true
+- name: Re-deploy TinyAuth with new credentials (force recreate)
+  community.docker.docker_compose_v2:
+    project_src: "{{ identity_compose_dir }}"
+    services:
+      - tinyauth
+    state: present
+    recreate: always
+  become: true
+  become_user: "{{ deploy_user }}"
   when: identity_tinyauth_dynamic_secret is defined
   tags: [deploy, identity, bootstrap, magic]
 

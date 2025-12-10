@@ -79,6 +79,11 @@ enableGitInfo = true
     favicon32x32 = "/favicon-32x32.png"
     apple_touch_icon = "/apple-touch-icon.png"
 
+  [params.cover]
+    hidden = false         # Глобальный переключатель (оставь false)
+    hiddenInList = false   # В ленте/на главной ПОКАЗЫВАТЬ
+    hiddenInSingle = true  # Внутри статьи СКРЫВАТЬ (то, что ты хочешь!)
+
 # Соцсети
 {% if hugo_social_github %}
   [[params.socialIcons]]

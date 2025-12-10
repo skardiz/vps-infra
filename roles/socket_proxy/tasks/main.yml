@@ -1,0 +1,44 @@
+---
+# 1. Получаем GID группы docker на хосте через shell
+- name: Get Docker Group GID
+  ansible.builtin.shell: "getent group docker | cut -d: -f3"
+  register: socket_proxy_docker_gid_result
+  changed_when: false
+  tags: [socket_proxy, deploy]
+
+- name: Set Docker GID fact
+  ansible.builtin.set_fact:
+    socket_proxy_docker_gid: "{{ socket_proxy_docker_gid_result.stdout }}"
+  tags: [socket_proxy, deploy]
+
+# 2. Создаем директории
+- name: Ensure Socket Proxy directory exists
+  ansible.builtin.file:
+    path: "{{ socket_proxy_compose_dir }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0755"
+  tags: [socket_proxy, deploy]
+
+# 3. Генерируем конфиг
+- name: Render docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ socket_proxy_compose_dir }}/docker-compose.yml"
+    mode: "0640"
+    owner: "{{ deploy_user }}"
+    group: docker
+  notify: Restart Socket Proxy
+  tags: [socket_proxy, deploy]
+
+# 4. Запускаем стек
+- name: Deploy Socket Proxy Stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ socket_proxy_compose_dir }}"
+    state: present
+    pull: always
+    remove_orphans: true
+  become: true
+  become_user: "{{ deploy_user }}"
+  tags: [socket_proxy, deploy]

@@ -1,49 +1,64 @@
 ---
-- name: Configure VPS with base packages, Docker, Traefik and services
-  hosts: vps
+- name: Configure VPS with base packages, Docker, Caddy and services
+  hosts: prod_node
   become: true
 
-  # ВАЖНО: Используем FQCN (Fully Qualified Collection Name)
   roles:
-    # 1. База
+    # === LAYER 1: FOUNDATION ===
+    # Базовая настройка системы (пакеты, пользователи, файрвол)
     - role: ziix.infra.common
       tags: common
 
+    # === LAYER 2: CONTAINER RUNTIME ===
+    # Docker Engine + сеть + cleanup jobs
     - role: ziix.infra.docker
       tags: docker
 
-    # 2. Безопасность и Аутентификация
-    - role: ziix.infra.identity
-      tags: identity
+    # === LAYER 3: SECURITY ===
+    # Защищённый доступ к Docker API (нужен для Caddy и других)
+    - role: ziix.infra.socket_proxy
+      tags: socket_proxy
 
-    # 3. Инфраструктура
+    # === LAYER 4: INGRESS (ENTRY POINT) ===
+    # Reverse proxy - единая точка входа для всех сервисов
     - role: ziix.infra.caddy
       tags: caddy
 
+    # === LAYER 5: AUTHENTICATION ===
+    # LDAP + OAuth2 Provider + Forward Auth (нужны ДО защищённых сервисов)
+    - role: ziix.infra.identity
+      tags: identity
+
+    # === LAYER 6: MONITORING & HEALTH ===
+    # Автовосстановление контейнеров (следит за healthchecks)
     - role: ziix.infra.autoheal
       tags: autoheal
 
-    - role: ziix.infra.restic
-      tags: restic
-
-    # 4. Прикладные сервисы
-    - role: ziix.infra.tuwunel
-      tags: tuwunel
-
-    - role: ziix.infra.amnezia
-      tags: amnezia
-
-    - role: ziix.infra.syncthing
-      tags: syncthing
-
-    - role: ziix.infra.vaultwarden
-      tags: vaultwarden
+    # === LAYER 7: APPLICATIONS ===
+    # Мониторинг и управление
+    - role: ziix.infra.dozzle
+      tags: dozzle
 
     - role: ziix.infra.beszel
       tags: beszel
 
-    - role: ziix.infra.dozzle
-      tags: dozzle
+    # Хранилища и данные
+    - role: ziix.infra.vaultwarden
+      tags: vaultwarden
 
+    - role: ziix.infra.syncthing
+      tags: syncthing
+
+    # Статический сайт
     - role: ziix.infra.hugo
       tags: hugo
+
+    # === LAYER 8: COMMUNICATIONS ===
+    # Matrix (Synapse через Tuwunel) + LiveKit
+    - role: ziix.infra.tuwunel
+      tags: tuwunel
+
+    # === LAYER 9: BACKUP ===
+    # Резервное копирование (последним, чтобы не мешать деплою)
+    - role: ziix.infra.restic
+      tags: restic

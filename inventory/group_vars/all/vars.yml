@@ -45,3 +45,6 @@ tuwunel_livekit_enabled: true
 
 # Hugo static site
 hugo_enabled: true  # ← ДОБАВЬ ТОЛЬКО ЭТУ СТРОКУ!
+
+# === FEATURE FLAGS ===
+use_socket_proxy: true
