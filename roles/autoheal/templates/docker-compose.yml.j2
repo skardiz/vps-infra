@@ -14,6 +14,8 @@ services:
       AUTOHEAL_INTERVAL: "{{ autoheal_interval }}"
       AUTOHEAL_START_PERIOD: "{{ autoheal_start_period }}"
       AUTOHEAL_DEFAULT_STOP_TIMEOUT: "{{ autoheal_stop_timeout }}"
+      # Важнейшая настройка для Sablier
+      AUTOHEAL_ONLY_MONITOR_RUNNING: "{{ autoheal_only_monitor_running }}"
       TZ: "{{ autoheal_timezone }}"
 {% if autoheal_use_socket_proxy %}
       DOCKER_SOCK: "{{ autoheal_docker_host }}"

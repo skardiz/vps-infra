@@ -1,4 +1,14 @@
 ---
+# Валидация переменных (Best Practice)
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - caddy_acme_email is defined
+      - docker_network_name is defined
+      - deploy_user is defined
+    fail_msg: "Required variables missing for Caddy role"
+  tags: [caddy, check]
+
 - name: Ensure Caddy directories exist
   ansible.builtin.file:
     path: "{{ item }}"
@@ -10,6 +20,7 @@
     - "{{ caddy_compose_dir }}"
     - "{{ caddy_config_dir }}"
     - "{{ caddy_data_dir }}"
+  tags: [caddy, filesystem]
 
 - name: Render Caddyfile & Dockerfile
   ansible.builtin.template:
@@ -22,6 +33,7 @@
     - { src: "Caddyfile.j2", dest: "{{ caddy_config_dir }}/Caddyfile" }
     - { src: "Dockerfile.j2", dest: "{{ caddy_compose_dir }}/Dockerfile" }
   register: caddy_configs
+  tags: [caddy, config]
 
 - name: Render docker-compose.yml
   ansible.builtin.template:
@@ -31,6 +43,7 @@
     owner: "{{ deploy_user }}"
     group: docker
   register: caddy_compose
+  tags: [caddy, config]
 
 - name: Allow HTTP/HTTPS ports (UFW)
   community.general.ufw:
@@ -41,6 +54,7 @@
   loop:
     - "80"
     - "443"
+  tags: [caddy, firewall]
 
 - name: Build Caddy Image
   community.docker.docker_image:
@@ -50,6 +64,7 @@
       path: "{{ caddy_compose_dir }}"
       pull: true
     force_source: "{{ caddy_configs.changed }}"
+  tags: [caddy, build]
 
 - name: Deploy Caddy Stack
   community.docker.docker_compose_v2:
@@ -59,3 +74,4 @@
     remove_orphans: true
   become: true
   become_user: "{{ deploy_user }}"
+  tags: [caddy, deploy]

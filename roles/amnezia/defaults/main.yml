@@ -10,11 +10,12 @@ amnezia_compose_dir: "{{ docker_base_dir }}/{{ amnezia_service_name }}"
 amnezia_config_dir: "{{ amnezia_compose_dir }}/config"
 amnezia_data_dir: "{{ amnezia_compose_dir }}/data"
 
-# [ Network & Ports ]
+# [ Network & Ingress ]
 amnezia_docker_network: "{{ docker_network_name }}"
 amnezia_domain: "amnezia.{{ base_domain }}"
-amnezia_port_http: 80      # Nginx inside container
-amnezia_port_vpn: 51820    # UDP WireGuard port
+amnezia_ingress_provider: "caddy"
+amnezia_port_http: 80
+amnezia_port_vpn: 51820
 
 # [ Configuration ]
 amnezia_restart_policy: "{{ docker_restart_policy | default('unless-stopped') }}"
@@ -26,8 +27,17 @@ amnezia_default_dns: "8.8.8.8,1.1.1.1"
 # [ Resources ]
 amnezia_memory_limit: "{{ docker_memory_limit | default('256M') }}"
 
+# [ Authentication ]
+amnezia_auth_enabled: true
+amnezia_auth_header_user: "Remote-User"
+
+# [ Integrations ]
+amnezia_enable_autoheal: "{{ use_autoheal | default(true) }}"
+# Sablier: выключен by design для VPN
+amnezia_use_sablier: false
+
 # [ Healthcheck Strategy ]
-amnezia_hc_interval: "{{ docker_hc_interval | default('30s') }}"
-amnezia_hc_timeout: "{{ docker_hc_timeout | default('5s') }}"
-amnezia_hc_retries: "{{ docker_hc_retries | default(3) }}"
-amnezia_hc_start_period: "{{ docker_hc_start_period | default('15s') }}"
+amnezia_hc_interval: "30s"
+amnezia_hc_timeout: "5s"
+amnezia_hc_retries: 3
+amnezia_hc_start_period: "15s"

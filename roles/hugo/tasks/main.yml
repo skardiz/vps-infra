@@ -1,4 +1,12 @@
 ---
+- name: Validate variables
+  ansible.builtin.assert:
+    that:
+      - hugo_domain is defined
+      - deploy_user is defined
+    fail_msg: "Required variables missing for Hugo"
+  tags: [hugo, check]
+
 - name: Ensure Hugo directories exist
   ansible.builtin.file:
     path: "{{ item }}"

@@ -1,7 +1,7 @@
 ---
 # [ Service Identity ]
 socket_proxy_service_name: "socket-proxy"
-socket_proxy_container_name: "docker-socket-proxy"
+socket_proxy_container_name: "socket-proxy"
 
 # [ Image ]
 socket_proxy_image: "wollomatic/socket-proxy"
@@ -20,7 +20,7 @@ socket_proxy_allow_from: "0.0.0.0/0"
 # Поддержка запросов с/без префикса версии API (/v1.24/containers/json или /containers/json)
 # Это нужно для совместимости с разными клиентами (Autoheal, Caddy, Dozzle)
 socket_proxy_allow_get_pattern: "(/v[0-9.]+)?/(version|containers/.*|events.*|info|networks.*|tasks.*|nodes.*|services.*|distribution.*|images.*|volumes.*)"
-socket_proxy_allow_post_pattern: "(/v[0-9.]+)?/containers/[a-zA-Z0-9_.-]+/(start|stop|restart)"
+socket_proxy_allow_post_pattern: "(/v[0-9.]+)?/containers/[a-zA-Z0-9_.-]+/(start|stop|restart|wait)"
 socket_proxy_allow_head_pattern: "/_ping"
 
 # [ Watchdog & Health ]

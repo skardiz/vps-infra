@@ -1,5 +1,5 @@
 services:
-  # --- Nginx Service (Web Server) ---
+  # --- Nginx Service ---
   {{ hugo_service_name }}:
     image: nginx:alpine
     container_name: {{ hugo_service_name }}
@@ -8,14 +8,16 @@ services:
       - {{ hugo_network_name }}
     volumes:
       - "{{ hugo_public_dir }}:/usr/share/nginx/html:ro"
+    
     labels:
+{% if hugo_ingress_provider == 'caddy' %}
       caddy: "{{ hugo_domain }}"
       caddy.reverse_proxy: "{{ "{{" }}upstreams 80{{ "}}" }}"
       caddy.encode: "gzip"
       caddy.import: "secure-headers"
       caddy.header.Cache-Control: "public, max-age=3600"
-      
-      # Matrix Delegation
+
+      # Matrix Delegation (Без изменений, это специфичная логика)
       caddy.handle_path_0: "/.well-known/matrix/server"
       caddy.handle_path_0.respond: '{"m.server":"matrix.{{ hugo_domain }}:443"}'
       caddy.handle_path_0.header: "Content-Type application/json"
@@ -25,8 +27,13 @@ services:
       caddy.handle_path_1.respond: '{"m.homeserver":{"base_url":"https://matrix.{{ hugo_domain }}"},"org.matrix.msc4143.rtc_foci":[{"type":"livekit","livekit_service_url":"https://livekit.{{ hugo_domain }}","jwt_service_url":"https://livekit.{{ hugo_domain }}/sfu/get"}]}'
       caddy.handle_path_1.header: "Content-Type application/json"
       caddy.handle_path_1.header_0: "Access-Control-Allow-Origin *"
+{% endif %}
 
-  # --- Hugo Builder (One-shot) ---
+{% if hugo_enable_autoheal | bool %}
+      autoheal: "true"
+{% endif %}
+
+  # --- Hugo Builder ---
   {{ hugo_builder_container }}:
     image: hugomods/hugo:debian-exts
     container_name: {{ hugo_builder_container }}
@@ -45,7 +52,7 @@ services:
     networks:
       - {{ hugo_network_name }}
     labels:
-      caddy: ""
+      caddy: "" # Disable ingress for builder
 
 networks:
   {{ hugo_network_name }}:

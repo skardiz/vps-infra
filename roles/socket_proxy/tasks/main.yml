@@ -1,15 +1,27 @@
 ---
-# 1. Получаем GID группы docker на хосте через shell
+# Валидация (Best Practice)
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - docker_network_name is defined
+      - deploy_user is defined
+    fail_msg: "Required variables missing for Socket Proxy role"
+  tags: [socket_proxy, check]
+
+# 1. Получаем GID
 - name: Get Docker Group GID
-  ansible.builtin.shell: "getent group docker | cut -d: -f3"
+  ansible.builtin.shell: "set -o pipefail && getent group docker | cut -d: -f3"
+  args:
+    executable: /bin/bash
   register: socket_proxy_docker_gid_result
   changed_when: false
-  tags: [socket_proxy, deploy]
+  check_mode: false
+  tags: [socket_proxy, config]
 
 - name: Set Docker GID fact
   ansible.builtin.set_fact:
     socket_proxy_docker_gid: "{{ socket_proxy_docker_gid_result.stdout }}"
-  tags: [socket_proxy, deploy]
+  tags: [socket_proxy, config]
 
 # 2. Создаем директории
 - name: Ensure Socket Proxy directory exists
@@ -19,7 +31,7 @@
     owner: "{{ deploy_user }}"
     group: "{{ deploy_user }}"
     mode: "0755"
-  tags: [socket_proxy, deploy]
+  tags: [socket_proxy, filesystem]
 
 # 3. Генерируем конфиг
 - name: Render docker-compose.yml
@@ -30,7 +42,7 @@
     owner: "{{ deploy_user }}"
     group: docker
   notify: Restart Socket Proxy
-  tags: [socket_proxy, deploy]
+  tags: [socket_proxy, config]
 
 # 4. Запускаем стек
 - name: Deploy Socket Proxy Stack

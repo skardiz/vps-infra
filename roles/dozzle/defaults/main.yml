@@ -3,47 +3,57 @@
 dozzle_service_name: "dozzle"
 dozzle_container_name: "{{ dozzle_service_name }}"
 dozzle_image_name: "amir20/dozzle"
+dozzle_version: "v8.13.14"  # Актуальная версия
 
 # [ Paths & Directories ]
 dozzle_compose_dir: "{{ docker_base_dir }}/{{ dozzle_service_name }}"
-dozzle_config_dir: "{{ dozzle_compose_dir }}/config"
-dozzle_data_dir: "{{ dozzle_compose_dir }}/data"
+# Неиспользуемые config/data dir удалены
 
 # [ Network & Ports ]
 dozzle_docker_network: "{{ docker_network_name }}"
 dozzle_port: 8080
 
-# [ Domain ]
+# [ Domain & Ingress ]
 dozzle_domain: "{{ dozzle_service_name }}.{{ base_domain }}"
+dozzle_ingress_provider: "caddy"
 
 # [ Configuration ]
 dozzle_restart_policy: "{{ docker_restart_policy | default('unless-stopped') }}"
 dozzle_timezone: "{{ docker_timezone | default('Europe/Moscow') }}"
+dozzle_memory_limit: "128M"
 
 # [ Dozzle Features ]
 dozzle_enable_actions: false
 dozzle_enable_shell: false
 dozzle_no_analytics: true
 
-# [ Resources ]
-dozzle_memory_limit: "128M"
-
-# [ Build Versions ]
-dozzle_version: "latest"
-
 # [ Authentication ]
 dozzle_auth_enabled: true
+dozzle_auth_header_user: "Remote-User"
+dozzle_auth_header_email: "Remote-Email"
+dozzle_auth_header_name: "Remote-Name"
 
-# [ Socket Proxy Integration ]
+# [ Integrations ]
+# 1. Socket Proxy
 dozzle_use_socket_proxy: "{{ use_socket_proxy | default(false) }}"
 dozzle_docker_host: >-
-  {{ 'tcp://docker-socket-proxy:2375'
+  {{ 'tcp://socket-proxy:2375'
      if dozzle_use_socket_proxy
      else 'unix:///var/run/docker.sock' }}
 
+# 2. Autoheal
+dozzle_enable_autoheal: "{{ use_autoheal | default(true) }}"
+
+# 3. Sablier (Scale-to-Zero)
+dozzle_use_sablier: "{{ use_sablier | default(false) }}"
+dozzle_sablier_window: "5m"
+dozzle_sablier_group: "dozzle"
+dozzle_sablier_display_name: "Dozzle Logs"
+dozzle_sablier_theme: "ghost"
+
 # [ Healthcheck Strategy ]
 dozzle_hc_enabled: true
-dozzle_hc_interval: "10s"
+dozzle_hc_interval: "30s"
 dozzle_hc_timeout: "5s"
-dozzle_hc_retries: 5
-dozzle_hc_start_period: "5s"
+dozzle_hc_retries: 3
+dozzle_hc_start_period: "30s" # Увеличено для надежности

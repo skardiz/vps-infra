@@ -1,4 +1,21 @@
 ---
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - tuwunel_domain is defined
+      - tuwunel_livekit_key is defined
+      - deploy_user is defined
+    fail_msg: "Required variables missing for Tuwunel/LiveKit"
+  tags: [tuwunel, check]
+
+- name: Ensure Docker network exists
+  community.docker.docker_network:
+    name: "{{ tuwunel_docker_network }}"
+    state: present
+  become: true
+  become_user: "{{ deploy_user }}"
+  tags: [tuwunel, network]
+
 # 1. Папки
 - name: Ensure Tuwunel directories exist
   ansible.builtin.file:
@@ -11,6 +28,7 @@
     - "{{ tuwunel_compose_dir }}"
     - "{{ tuwunel_config_dir }}"
     - "{{ tuwunel_data_dir }}"
+  tags: [tuwunel, filesystem]
 
 # 2. Секреты (LDAP Password)
 - name: Create LDAP Bind Password file
@@ -21,6 +39,7 @@
     owner: "{{ deploy_user }}"
   no_log: true
   when: tuwunel_ldap_enabled | default(false)
+  tags: [tuwunel, config]
 
 # 3. Конфиги (Tuwunel & LiveKit)
 - name: Render Configs
@@ -33,6 +52,7 @@
     - { src: "tuwunel.toml.j2", dest: "{{ tuwunel_config_dir }}/tuwunel.toml" }
     - { src: "livekit.yaml.j2", dest: "{{ tuwunel_config_dir }}/livekit.yaml" }
   notify: Restart Tuwunel
+  tags: [tuwunel, config]
 
 # 4. UFW (Firewall)
 - name: Configure UFW for Matrix & LiveKit
@@ -45,6 +65,7 @@
     - { port: "8448", proto: "tcp", comment: "Matrix Federation" }
     - { port: "{{ tuwunel_livekit_tcp_port }}", proto: "tcp", comment: "LiveKit TCP" }
     - { port: "{{ tuwunel_livekit_udp_start }}:{{ tuwunel_livekit_udp_end }}", proto: "udp", comment: "LiveKit WebRTC" }
+  tags: [tuwunel, firewall]
 
 # 5. Docker Compose
 - name: Render docker-compose.yml
@@ -55,12 +76,15 @@
     owner: "{{ deploy_user }}"
     group: docker
   notify: Restart Tuwunel
+  tags: [tuwunel, config]
 
 - name: Deploy Tuwunel Stack
   community.docker.docker_compose_v2:
     project_src: "{{ tuwunel_compose_dir }}"
     state: present
+    # Исправляем синтаксис
     pull: always
     remove_orphans: true
   become: true
   become_user: "{{ deploy_user }}"
+  tags: [tuwunel, deploy]

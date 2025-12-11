@@ -33,9 +33,20 @@ services:
       start_period: {{ vaultwarden_hc_start_period }}
 
     labels:
+      # === INGRESS: CADDY ===
+{% if vaultwarden_ingress_provider == 'caddy' %}
       caddy: "{{ vaultwarden_domain }}"
       caddy.import: "secure-headers"
+      # Нет внешней Auth, используем прямой прокси
       caddy.reverse_proxy: "{{ vaultwarden_service_name }}:{{ vaultwarden_port_http }}"
+      # WebSocket support usually works out of the box with Caddy v2, but sometimes needs explicit config
+      # For Vaultwarden, usually default proxy is enough.
+{% endif %}
+
+      # === AUTOHEAL ===
+{% if vaultwarden_enable_autoheal | bool %}
+      autoheal: "true"
+{% endif %}
 
 networks:
   {{ vaultwarden_docker_network }}:

@@ -1,4 +1,12 @@
 ---
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - syncthing_domain is defined
+      - deploy_user is defined
+    fail_msg: "Required variables missing for Syncthing"
+  tags: [syncthing, check]
+
 - name: Ensure Syncthing directories exist
   ansible.builtin.file:
     path: "{{ item }}"
@@ -9,6 +17,7 @@
   loop:
     - "{{ syncthing_compose_dir }}"
     - "{{ syncthing_data_dir }}"
+  tags: [syncthing, filesystem]
 
 - name: Render docker-compose.yml
   ansible.builtin.template:
@@ -17,6 +26,7 @@
     mode: "0640"
     owner: "{{ deploy_user }}"
     group: docker
+  tags: [syncthing, config]
 
 - name: Allow Syncthing ports (UFW)
   community.general.ufw:
@@ -28,6 +38,7 @@
     - { port: "22000", proto: "tcp", comment: "Syncthing Transfer TCP" }
     - { port: "22000", proto: "udp", comment: "Syncthing Transfer UDP" }
     - { port: "21027", proto: "udp", comment: "Syncthing Discovery" }
+  tags: [syncthing, firewall]
 
 - name: Deploy Syncthing Stack
   community.docker.docker_compose_v2:
@@ -37,3 +48,4 @@
     remove_orphans: true
   become: true
   become_user: "{{ deploy_user }}"
+  tags: [syncthing, deploy]

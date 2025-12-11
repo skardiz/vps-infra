@@ -21,6 +21,9 @@ services:
 {% if caddy_use_socket_proxy %}
       DOCKER_HOST: "{{ caddy_docker_host }}"
 {% endif %}
+{% if caddy_use_cloudflare_dns %}
+      CLOUDFLARE_API_TOKEN: "{{ caddy_cloudflare_token }}"
+{% endif %}
       CADDY_INGRESS_NETWORKS: "{{ caddy_docker_network }}"
       CADDY_DOCKER_CADDYFILE_PATH: "/config/Caddyfile"
       ACME_EMAIL: "{{ caddy_acme_email }}"

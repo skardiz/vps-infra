@@ -10,9 +10,10 @@ syncthing_compose_dir: "{{ docker_base_dir }}/{{ syncthing_service_name }}"
 syncthing_config_dir: "{{ syncthing_compose_dir }}/config"
 syncthing_data_dir: "{{ syncthing_compose_dir }}/data"
 
-# [ Network & Ports ]
+# [ Network & Ingress ]
 syncthing_docker_network: "{{ docker_network_name }}"
 syncthing_domain: "syncthing.{{ base_domain }}"
+syncthing_ingress_provider: "caddy"
 syncthing_web_port: "8384"
 syncthing_tcp_port: "22000"
 syncthing_udp_port: "22000"
@@ -27,8 +28,17 @@ syncthing_pgid: "{{ docker_pgid | default('1000') }}"
 # [ Resources ]
 syncthing_memory_limit: "{{ docker_memory_limit | default('384M') }}"
 
+# [ Authentication ]
+syncthing_auth_enabled: true
+syncthing_auth_header_user: "Remote-User"
+
+# [ Integrations ]
+syncthing_enable_autoheal: "{{ use_autoheal | default(true) }}"
+# Sablier: Off (Sync must be always on)
+syncthing_use_sablier: false
+
 # [ Healthcheck Strategy ]
-syncthing_hc_interval: "{{ docker_hc_interval | default('60s') }}"
-syncthing_hc_timeout: "{{ docker_hc_timeout | default('10s') }}"
-syncthing_hc_retries: "{{ docker_hc_retries | default(3) }}"
-syncthing_hc_start_period: "60s" # Syncthing starts slow
+syncthing_hc_interval: "60s"
+syncthing_hc_timeout: "10s"
+syncthing_hc_retries: 3
+syncthing_hc_start_period: "60s"

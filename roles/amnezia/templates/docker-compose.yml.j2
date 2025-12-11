@@ -16,7 +16,6 @@ services:
       DEFAULT_SUBNET: "{{ amnezia_default_subnet }}"
       DEFAULT_PORT: "{{ amnezia_port_vpn }}"
       DEFAULT_DNS: "{{ amnezia_default_dns }}"
-      # We use external auth (TinyAuth) via Caddy, so no BASIC_AUTH needed inside
 
     volumes:
       - "{{ amnezia_data_dir }}:/etc/amnezia"
@@ -25,12 +24,9 @@ services:
     ports:
       - "{{ amnezia_port_vpn }}:{{ amnezia_port_vpn }}/udp"
 
-    # Required for VPN functionality
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    devices:
-      - /dev/net/tun:/dev/net/tun
+    # VPN Requirements
+    cap_add: [NET_ADMIN, SYS_MODULE]
+    devices: [/dev/net/tun:/dev/net/tun]
     sysctls:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
@@ -49,19 +45,27 @@ services:
       start_period: {{ amnezia_hc_start_period }}
 
     labels:
-      # === CADDY CONFIGURATION ===
+      # === INGRESS: CADDY ===
+{% if amnezia_ingress_provider == 'caddy' %}
       caddy: "{{ amnezia_domain }}"
       caddy.import: "secure-headers"
-      
-      # Auth via TinyAuth (Forward Auth)
-      # Important: 'handle' ensures auth is checked BEFORE proxying
       caddy.route: ""
+
+      # Step 0: Auth (TinyAuth)
+  {% if amnezia_auth_enabled %}
       caddy.route.0_forward_auth: "tinyauth:3000"
       caddy.route.0_forward_auth.uri: "/api/auth/caddy"
-      caddy.route.0_forward_auth.copy_headers: "Remote-User Remote-Name Remote-Email Remote-Groups"
-      
-      # Proxy to Amnezia UI
-      caddy.route.1_reverse_proxy: "{{ amnezia_service_name }}:{{ amnezia_port_http }}"
+      caddy.route.0_forward_auth.copy_headers: "{{ amnezia_auth_header_user }} Remote-Name Remote-Email Remote-Groups"
+  {% endif %}
+
+      # Step 9: Proxy
+      caddy.route.9_reverse_proxy: "{{ amnezia_service_name }}:{{ amnezia_port_http }}"
+{% endif %}
+
+      # === AUTOHEAL ===
+{% if amnezia_enable_autoheal | bool %}
+      autoheal: "true"
+{% endif %}
 
 networks:
   {{ amnezia_docker_network }}:

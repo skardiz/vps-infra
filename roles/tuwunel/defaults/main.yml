@@ -20,10 +20,11 @@ tuwunel_livekit_tag: "{{ docker_image_tag | default('latest') }}"
 tuwunel_jwt_image: "ghcr.io/element-hq/lk-jwt-service"
 tuwunel_jwt_tag: "{{ docker_image_tag | default('latest') }}"
 
-# [ Domains ]
+# [ Domains & Ingress ]
 tuwunel_domain: "{{ matrix_domain | default('matrix.' ~ base_domain) }}"
 tuwunel_server_name: "{{ base_domain }}"
 tuwunel_livekit_domain: "livekit.{{ base_domain }}"
+tuwunel_ingress_provider: "caddy"
 
 # [ Ports ]
 tuwunel_port: 8008
@@ -48,6 +49,10 @@ tuwunel_livekit_secret: "{{ vault_matrix.livekit.secret }}"
 
 # [ Network ]
 tuwunel_docker_network: "{{ docker_network_name }}"
+
+# [ Integrations ]
+tuwunel_enable_autoheal: "{{ use_autoheal | default(true) }}"
+tuwunel_use_sablier: false # Matrix must be always online
 
 # [ Performance & Limits ]
 tuwunel_max_request_size: 20971520

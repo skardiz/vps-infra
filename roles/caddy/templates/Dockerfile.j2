@@ -1,14 +1,12 @@
-FROM caddy:{{ caddy_version }}-builder AS builder
-
-ENV GOPROXY=https://goproxy.io,direct
-ENV CGO_ENABLED=0
+FROM caddy:2.10.2-builder AS builder
 
 RUN xcaddy build \
-    --with github.com/lucaslorentz/caddy-docker-proxy/v2@{{ caddy_docker_proxy_version }}
+    --with github.com/lucaslorentz/caddy-docker-proxy/v2@{{ caddy_docker_proxy_version }} \
+    --with github.com/sablierapp/sablier-caddy-plugin@{{ caddy_sablier_plugin_version }} \
+    --with github.com/caddy-dns/cloudflare  # <--- ВАЖНО
 
-FROM caddy:{{ caddy_version }}-alpine
+FROM caddy:2.10.2-alpine
 
 COPY --from=builder /usr/bin/caddy /usr/bin/caddy
 
-ENTRYPOINT ["caddy"]
-CMD ["docker-proxy"]
+CMD ["caddy", "docker-proxy"]

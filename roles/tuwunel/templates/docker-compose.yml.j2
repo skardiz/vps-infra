@@ -38,6 +38,7 @@ services:
       start_period: 40s
 
     labels:
+{% if tuwunel_ingress_provider == 'caddy' %}
       # === SITE 1: Matrix (matrix.ziix.ru) ===
       caddy: "{{ tuwunel_domain }}"
       caddy.import: "secure-headers"
@@ -60,11 +61,9 @@ services:
       # 3. Proxy to Matrix
       caddy.route.2_reverse_proxy: "{{ tuwunel_service_name }}:{{ tuwunel_port }}"
 
-
       # === SITE 2: Root Domain (ziix.ru) ===
       caddy_1: "{{ tuwunel_server_name }}"
       caddy_1.import: "secure-headers"
-
       caddy_1.route: ""
 
       # 1. Well-known Client
@@ -78,7 +77,11 @@ services:
       caddy_1.route.1_handle_path.header_0: "Access-Control-Allow-Origin *"
       caddy_1.route.1_handle_path.header_1: "+Content-Type application/json"
       caddy_1.route.1_handle_path.respond: '`{"m.server":"{{ tuwunel_domain }}:443"}`'
+{% endif %}
 
+{% if tuwunel_enable_autoheal | bool %}
+      autoheal: "true"
+{% endif %}
 
   {{ tuwunel_livekit_service_name }}:
     image: "{{ tuwunel_livekit_image }}:{{ tuwunel_livekit_tag }}"
@@ -115,6 +118,7 @@ services:
       start_period: 20s
 
     labels:
+{% if tuwunel_ingress_provider == 'caddy' %}
       caddy: "{{ tuwunel_livekit_domain }}"
       caddy.import: "secure-headers"
 
@@ -126,6 +130,11 @@ services:
 
       # 2. LiveKit
       caddy.route.1_reverse_proxy: "{{ tuwunel_livekit_service_name }}:{{ tuwunel_livekit_http_port }}"
+{% endif %}
+
+{% if tuwunel_enable_autoheal | bool %}
+      autoheal: "true"
+{% endif %}
 
   {{ tuwunel_jwt_service_name }}:
     image: "{{ tuwunel_jwt_image }}:{{ tuwunel_jwt_tag }}"

@@ -1,4 +1,21 @@
 ---
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - beszel_domain is defined
+      - beszel_admin_email is defined
+      - deploy_user is defined
+    fail_msg: "CRITICAL: Required variables missing for Beszel"
+  tags: [beszel, check]
+
+- name: Ensure Docker network exists
+  community.docker.docker_network:
+    name: "{{ beszel_network }}"
+    state: present
+  become: true
+  become_user: "{{ deploy_user }}"
+  tags: [beszel, network]
+
 # 1. Создание папок
 - name: Ensure Beszel directories exist
   ansible.builtin.file:
@@ -34,15 +51,17 @@
   tags: [beszel, deploy]
 
 # 4. Проверка здоровья
-- name: Wait for Beszel Hub to start
-  ansible.builtin.uri:
-    url: "https://{{ beszel_domain }}/api/health"
-    status_code: 200
-    validate_certs: false
-  register: beszel_health
-  until: beszel_health.status == 200
-  retries: 30
-  delay: 5
+- name: Wait for Beszel Hub container to be running
+  community.docker.docker_container_info:
+    name: "{{ beszel_hub_container }}"
+  register: beszel_hub_info
+  until:
+    - beszel_hub_info.exists
+    - beszel_hub_info.container is defined
+    - beszel_hub_info.container.State.Status == "running"
+  retries: 5
+  delay: 3
+  changed_when: false
   tags: [beszel, deploy]
 
 # ==============================================================================

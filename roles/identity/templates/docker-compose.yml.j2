@@ -34,9 +34,15 @@ services:
       start_period: {{ identity_hc_start_period }}
 
     labels:
+{% if identity_ingress_provider == 'caddy' %}
       caddy: "{{ identity_lldap_domain }}"
       caddy.reverse_proxy: "{{ '{{upstreams %s}}' | format(identity_lldap_port_http) }}"
       caddy.import: "secure-headers"
+{% endif %}
+
+{% if identity_enable_autoheal | bool %}
+      autoheal: "true"
+{% endif %}
 
     networks:
       - {{ docker_network_name }}
@@ -101,9 +107,15 @@ services:
       start_period: {{ identity_hc_start_period }}
 
     labels:
+{% if identity_ingress_provider == 'caddy' %}
       caddy: "{{ identity_pocketid_domain }}"
       caddy.reverse_proxy: "{{ '{{upstreams %s}}' | format(identity_pocketid_port) }}"
       caddy.import: "secure-headers"
+{% endif %}
+
+{% if identity_enable_autoheal | bool %}
+      autoheal: "true"
+{% endif %}
 
     networks:
       - {{ docker_network_name }}
@@ -141,9 +153,15 @@ services:
       PROVIDERS_POCKETID_NAME: "Pocket ID"
 
     labels:
+{% if identity_ingress_provider == 'caddy' %}
       caddy: "{{ identity_tinyauth_domain }}"
       caddy.reverse_proxy: "{{ '{{upstreams %s}}' | format(identity_tinyauth_port) }}"
       caddy.import: "secure-headers"
+{% endif %}
+
+{% if identity_enable_autoheal | bool %}
+      autoheal: "true"
+{% endif %}
 
     networks:
       - {{ docker_network_name }}

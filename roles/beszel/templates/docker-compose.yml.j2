@@ -35,12 +35,36 @@ services:
       retries: {{ beszel_hc_retries }}
 
     labels:
+{% if beszel_ingress_provider == 'caddy' %}
       caddy: "{{ beszel_domain }}"
       caddy.import: "secure-headers"
-      caddy.reverse_proxy: "{{ beszel_hub_container }}:8090"
+
+{% if beszel_use_sablier | default(false) %}
+      caddy.route.1_sablier: ""
+      caddy.route.1_sablier.group: "{{ beszel_sablier_group }}"
+      caddy.route.1_sablier.names: "{{ beszel_hub_container }}"
+      caddy.route.1_sablier.dynamic: ""
+      caddy.route.1_sablier.dynamic.display_name: "{{ beszel_sablier_display_name }}"
+      caddy.route.1_sablier.dynamic.theme: "ghost"
+      caddy.route.1_sablier.dynamic.refresh_frequency: "5s"
+{% endif %}
+
+      caddy.route.9_reverse_proxy: "{{ beszel_hub_container }}:8090"
+{% endif %}
+
+{% if beszel_enable_autoheal | bool %}
+      autoheal: "true"
+{% endif %}
+
+{% if beszel_use_sablier | default(false) %}
+      sablier.enable: "true"
+      sablier.group: "{{ beszel_sablier_group }}"
+      sablier.window: "{{ beszel_sablier_window }}"
+{% endif %}
 
 
   # 2. Beszel Agent (Active Mode)
+  # Агент НЕ спит (Sablier выключен), он должен слать данные.
   agent:
     image: "{{ beszel_agent_image }}:{{ beszel_agent_tag }}"
     container_name: "{{ beszel_agent_container }}"
@@ -53,21 +77,21 @@ services:
           memory: {{ beszel_agent_memory }}
 
     environment:
-      # Agent Key (Dynamic from API or fallback to Vault)
       KEY: "{{ beszel_dynamic_key | default(beszel_agent_key) }}"
-
-      # Active Mode: Hub URL + Token
       HUB_URL: "https://{{ beszel_domain }}"
-
-      # Token (User-Scoped, retrieved via API)
       TOKEN: "{{ beszel_dynamic_token | default('') }}"
-
-      # Mount point for root filesystem monitoring
       FILESYSTEM: "/extra-filesystems/root"
 
     volumes:
+      # Агенту нужен прямой доступ к сокету для статистики
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /:/extra-filesystems/root:ro
+      
+    labels:
+      # Агента мониторит Autoheal, но он не засыпает
+{% if beszel_enable_autoheal | bool %}
+      autoheal: "true"
+{% endif %}
 
 networks:
   {{ beszel_network }}:

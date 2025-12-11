@@ -1,0 +1,34 @@
+services:
+  {{ sablier_service_name }}:
+    image: "{{ sablier_image }}:{{ sablier_version }}"
+    container_name: "{{ sablier_service_name }}"
+    restart: unless-stopped
+    
+    deploy:
+      resources:
+        limits:
+          memory: {{ sablier_memory_limit }}
+
+    environment:
+      # Подключаемся к Docker через безопасный прокси
+      DOCKER_HOST: "{{ sablier_docker_host }}"
+      # Логирование
+      LOGGING_LEVEL: "info"
+
+    command: 
+      - start 
+      - --provider.name=docker
+
+    networks:
+      - {{ sablier_network }}
+
+    healthcheck:
+      # Простой чек API, чтобы убедиться, что сервер отвечает
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:10000/api/version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  {{ sablier_network }}:
+    external: true

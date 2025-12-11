@@ -15,6 +15,8 @@ autoheal_interval: 60
 autoheal_start_period: 60
 autoheal_stop_timeout: 10
 autoheal_container_label: "all"
+# ВАЖНО для Sablier: не трогать остановленные (спящие) контейнеры
+autoheal_only_monitor_running: "true"
 
 # [ Resources ]
 autoheal_memory_limit: "{{ docker_memory_limit | default('64M') }}"
@@ -31,6 +33,6 @@ autoheal_docker_network: "{{ docker_network_name }}"
 # [ Socket Proxy Integration ]
 autoheal_use_socket_proxy: "{{ use_socket_proxy | default(false) }}"
 autoheal_docker_host: >-
-  {{ 'tcp://docker-socket-proxy:2375'
+  {{ 'tcp://socket-proxy:2375'
      if autoheal_use_socket_proxy
      else 'unix:///var/run/docker.sock' }}

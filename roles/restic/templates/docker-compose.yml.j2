@@ -1,8 +1,12 @@
 services:
   worker:
+    # Используем собранный нами локальный образ
     image: "{{ restic_image }}:latest"
     container_name: "{{ restic_container_name }}"
     hostname: "{{ ansible_hostname }}"
+    # Explicitly set user to root inside container for backup permissions
+    # (Restic needs read access to mounted volumes)
+    user: root
 
     deploy:
       resources:
@@ -18,11 +22,10 @@ services:
 
     volumes:
       - ./entrypoint.sh:/entrypoint.sh:ro
-      - "{{ restic_config_dir }}:/root/.config/rclone:rw"
+      - "{{ restic_config_dir }}:/root/.config/rclone:ro" # Read-only config
 {% for mount in restic_mounts %}
-      - {{ mount.src }}:{{ mount.dst }}:ro
+      - {{ mount.src }}:{{ mount.dst }}:ro # Read-only backups!
 {% endfor %}
 
     entrypoint: ["/bin/sh", "/entrypoint.sh"]
-    # Restart is managed by Systemd, not Docker
     restart: "no"

@@ -11,6 +11,13 @@ identity_timezone: "{{ docker_timezone | default('Europe/Moscow') }}"
 identity_puid: "{{ docker_puid | default('1000') }}"
 identity_pgid: "{{ docker_pgid | default('1000') }}"
 
+# [ Ingress ]
+identity_ingress_provider: "caddy"
+
+# [ Integrations ]
+identity_enable_autoheal: "{{ use_autoheal | default(true) }}"
+identity_use_sablier: false # AUTH MUST BE ALWAYS ON
+
 # [ LLDAP Configuration ]
 identity_lldap_image: "lldap/lldap"
 identity_lldap_version: "{{ docker_image_tag | default('latest') }}"
@@ -41,8 +48,6 @@ identity_pocketid_memory_limit: "{{ docker_memory_limit | default('256M') }}"
 # [ LDAP Integration ]
 identity_pocketid_ldap_base: "ou=people,{{ identity_lldap_base_dn }}"
 identity_pocketid_ldap_admin_group: "lldap_admin"
-
-# [ Mappings ]
 identity_pocketid_ldap_attr_user_uid: "uid"
 identity_pocketid_ldap_attr_user_username: "uid"
 identity_pocketid_ldap_attr_user_email: "mail"
@@ -73,4 +78,4 @@ identity_tinyauth_pocketid_internal_url: "http://pocketid:1411"
 identity_hc_interval: "{{ docker_hc_interval | default('30s') }}"
 identity_hc_timeout: "{{ docker_hc_timeout | default('5s') }}"
 identity_hc_retries: "{{ docker_hc_retries | default(3) }}"
-identity_hc_start_period: "60s" # LLDAP requires slow start
+identity_hc_start_period: "60s"

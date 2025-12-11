@@ -8,9 +8,13 @@ Type=oneshot
 WorkingDirectory={{ restic_compose_dir }}
 TimeoutStartSec=10800
 MemoryMax=1G
+{% if restic_stop_service %}
 ExecStartPre=-/usr/bin/docker stop {{ restic_stop_service }}
+{% endif %}
 ExecStart=/usr/bin/docker start -a {{ restic_service_name }}
+{% if restic_stop_service %}
 ExecStopPost=/usr/bin/docker start {{ restic_stop_service }}
+{% endif %}
 
 [Install]
 WantedBy=multi-user.target

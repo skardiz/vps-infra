@@ -1,0 +1,15 @@
+---
+# [ Service Identity ]
+sablier_service_name: "sablier"
+sablier_image: "sablierapp/sablier"
+sablier_version: "latest"
+
+# [ Network ]
+sablier_network: "{{ docker_network_name }}"
+
+# [ Integration ]
+# Используем Socket Proxy для безопасности
+sablier_docker_host: "tcp://socket-proxy:2375"
+
+# [ Resources ]
+sablier_memory_limit: "64M"

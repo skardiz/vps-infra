@@ -1,5 +1,5 @@
 ---
-# Имя сервиса и контейнера
+# Имя сервиса
 hugo_service_name: hugo
 hugo_builder_container: hugo-builder
 
@@ -12,12 +12,16 @@ hugo_public_dir: "/srv/docker/shared/{{ hugo_service_name }}"
 hugo_repo: "https://github.com/ziix-ru/blog.git"
 hugo_repo_version: "main"
 
-# Docker Network
+# Network & Ingress
 hugo_network_name: "web"
-
-# Домен
 hugo_domain: "ziix.ru"
 hugo_base_url: "https://{{ hugo_domain }}"
+hugo_ingress_provider: "caddy"
+
+# Integrations
+hugo_enable_autoheal: "{{ use_autoheal | default(true) }}"
+# Sablier для статики не нужен (по умолчанию false всегда)
+hugo_use_sablier: false
 
 # --- Контент и Метаданные (ДОБАВЬ ЭТО) ---
 hugo_title: "ziix blog"

@@ -1,4 +1,12 @@
 ---
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - amnezia_domain is defined
+      - deploy_user is defined
+    fail_msg: "Required variables missing for Amnezia"
+  tags: [amnezia, check]
+
 - name: Ensure Amnezia directories exist
   ansible.builtin.file:
     path: "{{ item }}"
@@ -10,6 +18,7 @@
     - "{{ amnezia_compose_dir }}"
     - "{{ amnezia_config_dir }}"
     - "{{ amnezia_data_dir }}"
+  tags: [amnezia, filesystem]
 
 - name: Render Nginx config
   ansible.builtin.template:
@@ -19,6 +28,7 @@
     owner: "{{ deploy_user }}"
     group: "{{ deploy_user }}"
   notify: Restart Amnezia
+  tags: [amnezia, config]
 
 - name: Render docker-compose.yml
   ansible.builtin.template:
@@ -28,6 +38,7 @@
     owner: "{{ deploy_user }}"
     group: docker
   notify: Restart Amnezia
+  tags: [amnezia, config]
 
 - name: Allow AmneziaWG UDP port (UFW)
   community.general.ufw:
@@ -35,12 +46,15 @@
     port: "{{ amnezia_port_vpn | default('51820') }}"
     proto: udp
     comment: "AmneziaWG VPN"
+  tags: [amnezia, firewall]
 
 - name: Deploy AmneziaWG Stack
   community.docker.docker_compose_v2:
     project_src: "{{ amnezia_compose_dir }}"
     state: present
+    # Исправлен синтаксис
     pull: always
     remove_orphans: true
   become: true
   become_user: "{{ deploy_user }}"
+  tags: [amnezia, deploy]

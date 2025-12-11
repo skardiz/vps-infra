@@ -3,7 +3,6 @@ services:
     image: "{{ syncthing_image }}:{{ syncthing_image_tag }}"
     container_name: "{{ syncthing_container_name }}"
     restart: "{{ syncthing_restart_policy }}"
-
     # DISABLE DOCKER INIT (Conflict with s6-overlay)
     init: false
 
@@ -34,17 +33,23 @@ services:
       start_period: {{ syncthing_hc_start_period }}
 
     labels:
+{% if syncthing_ingress_provider == 'caddy' %}
       caddy: "{{ syncthing_domain }}"
       caddy.import: "secure-headers"
-      
-      # Auth via TinyAuth (Forward Auth)
-      # Using 'route' to ensure auth happens before proxy
       caddy.route: ""
+
+{% if syncthing_auth_enabled %}
       caddy.route.0_forward_auth: "tinyauth:3000"
       caddy.route.0_forward_auth.uri: "/api/auth/caddy"
-      caddy.route.0_forward_auth.copy_headers: "X-User X-Email X-Groups Remote-User Remote-Email"
-      
-      caddy.route.1_reverse_proxy: "{{ syncthing_service_name }}:{{ syncthing_web_port }}"
+      caddy.route.0_forward_auth.copy_headers: "X-User X-Email X-Groups {{ syncthing_auth_header_user }} Remote-Email"
+{% endif %}
+
+      caddy.route.9_reverse_proxy: "{{ syncthing_service_name }}:{{ syncthing_web_port }}"
+{% endif %}
+
+{% if syncthing_enable_autoheal | bool %}
+      autoheal: "true"
+{% endif %}
 
     networks:
       - {{ syncthing_docker_network }}

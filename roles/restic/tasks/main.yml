@@ -1,4 +1,13 @@
 ---
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - restic_password is defined
+      - restic_rclone_config is defined
+      - deploy_user is defined
+    fail_msg: "CRITICAL: Restic secrets are missing!"
+  tags: [restic, check]
+
 # 1. Создание папок
 - name: Ensure Restic directories exist
   ansible.builtin.file:
@@ -11,8 +20,9 @@
     - "{{ restic_compose_dir }}"
     - "{{ restic_config_dir }}"
     - "{{ restic_build_dir }}"
+  tags: [restic, filesystem]
 
-# 2. Создание файлов (Dockerfile, Rclone Config)
+# 2. Создание файлов
 - name: Create Dockerfile
   ansible.builtin.copy:
     dest: "{{ restic_build_dir }}/Dockerfile"
@@ -21,23 +31,26 @@
       RUN apk add --no-cache rclone ca-certificates
     mode: "0644"
   register: restic_dockerfile
+  tags: [restic, build]
 
 - name: Create Rclone Config
   ansible.builtin.copy:
     dest: "{{ restic_config_dir }}/rclone.conf"
     content: "{{ restic_rclone_config }}"
     mode: "0600"
-    owner: root # Секретный файл должен быть защищен
-    group: root
+    owner: "{{ deploy_user }}" # Изменили на deploy_user, чтобы Docker мог читать (через маунт)
+    group: "{{ deploy_user }}"
   no_log: true
+  tags: [restic, config]
 
-# 3. Рендеринг шаблонов (Entrypoint, Compose)
+# 3. Рендеринг шаблонов
 - name: Render Entrypoint Script
   ansible.builtin.template:
     src: entrypoint.sh.j2
     dest: "{{ restic_compose_dir }}/entrypoint.sh"
     mode: "0755"
     owner: "{{ deploy_user }}"
+  tags: [restic, config]
 
 - name: Render docker-compose.yml
   ansible.builtin.template:
@@ -46,6 +59,7 @@
     mode: "0640"
     owner: "{{ deploy_user }}"
     group: docker
+  tags: [restic, config]
 
 # 4. Сборка образа
 - name: Build Restic Image
@@ -55,11 +69,10 @@
     build:
       path: "{{ restic_build_dir }}"
       pull: true
-    # Пересобираем, если изменился Dockerfile
     force_source: "{{ restic_dockerfile.changed }}"
+  tags: [restic, build]
 
-# 5. Инициализация контейнера (Create only, без запуска)
-# Restic запускается только через systemd таймеры, поэтому мы не делаем state: present
+# 5. Инициализация контейнера (Create only)
 - name: Create Restic container (initialized but stopped)
   ansible.builtin.command:
     cmd: docker compose up --no-start --remove-orphans
@@ -67,6 +80,7 @@
   register: restic_create_container
   changed_when:
     - "'Created' in restic_create_container.stderr or 'Recreated' in restic_create_container.stderr"
+  tags: [restic, deploy]
 
 # 6. Systemd Units
 - name: Deploy Systemd Units
@@ -80,6 +94,7 @@
     - restic-check.service.j2
     - restic-check.timer.j2
   notify: Reload systemd
+  tags: [restic, systemd]
 
 - name: Enable and Start Timers
   ansible.builtin.systemd:
@@ -89,3 +104,4 @@
   loop:
     - restic-backup.timer
     - restic-check.timer
+  tags: [restic, systemd]

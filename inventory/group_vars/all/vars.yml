@@ -1,15 +1,19 @@
-# === DOMAIN & INFRASTRUCTURE ===
+---
+# ==============================================================================
+# 🌍 DOMAIN & INFRASTRUCTURE
+# ==============================================================================
 base_domain: "ziix.ru"
 
 # === USERS ===
 deploy_user: "deploy"
 admin_username: "admin"
-
-# === CREDENTIALS ===
+# Credentials from Vault
 admin_email: "{{ vault_infra.admin_email }}"
 admin_password: "{{ vault_infra.admin_password }}"
 
-# === DOCKER GLOBAL CONFIGURATION ===
+# ==============================================================================
+# ⚙️ SYSTEM & DOCKER
+# ==============================================================================
 docker_base_dir: "/srv/docker"
 docker_network_name: "web"
 docker_restart_policy: "unless-stopped"
@@ -29,22 +33,51 @@ docker_hc_timeout: "10s"
 docker_hc_retries: 3
 docker_hc_start_period: "10s"
 
-# === TUNING & RESOURCES ===
-swap_file_size: "4G"
-zram_percentage: "25"
+# ==============================================================================
+# 🛡️ GLOBAL FEATURE FLAGS (System-wide)
+# ==============================================================================
+# Безопасный доступ к Docker API (Рекомендуется: true)
+use_socket_proxy: true
 
-# === NETWORK PORTS ===
-turn_relay_port_start: 49152
-turn_relay_port_end: 49200
+# Экономия ресурсов: Scale-to-Zero (Рекомендуется: true)
+use_sablier: true
 
-# === FEATURE FLAGS ===
-# Tuwunel Matrix homeserver
-tuwunel_enabled: true
+# Автоматическое лечение контейнеров (Рекомендуется: true)
+use_autoheal: true
+
+# ==============================================================================
+# 📋 SERVICES MENU (Стол заказов)
+# true = Install & Run | false = Skip
+# ==============================================================================
+
+# --- Core Infrastructure ---
+caddy_enabled: true       # Ingress Controller (Web Server)
+use_cloudflare_dns: true # Использовать ли Cloudflare Wildcard
+
+identity_enabled: true    # Auth (LLDAP, PocketID, TinyAuth)
+
+# --- Management & Monitoring ---
+dozzle_enabled: true      # Logs Viewer
+beszel_enabled: false      # Lightweight Monitoring
+
+# --- Applications ---
+vaultwarden_enabled: true # Password Manager
+hugo_enabled: true        # Static Site / Blog
+syncthing_enabled: true  # P2P File Sync (Отключено пока)
+
+# --- Communications ---
+tuwunel_enabled: true     # Matrix Homeserver + LiveKit
 matrix_domain: "matrix.{{ base_domain }}"
 tuwunel_livekit_enabled: true
 
-# Hugo static site
-hugo_enabled: true  # ← ДОБАВЬ ТОЛЬКО ЭТУ СТРОКУ!
+# --- Maintenance ---
+restic_enabled: true     # Backup System (Отключено пока)
 
-# === FEATURE FLAGS ===
-use_socket_proxy: true
+# ==============================================================================
+# 🔧 TUNING & RESOURCES
+# ==============================================================================
+swap_file_size: "4G"
+zram_percentage: "25"
+
+turn_relay_port_start: 49152
+turn_relay_port_end: 49200
