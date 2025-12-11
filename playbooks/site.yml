@@ -20,10 +20,6 @@
       when: use_socket_proxy | default(false)
       tags: socket_proxy
 
-    - role: ziix.infra.sablier
-      when: use_sablier | default(false)
-      tags: sablier
-
     - role: ziix.infra.caddy
       when: caddy_enabled | default(true)
       tags: caddy
@@ -42,10 +38,13 @@
       when: use_autoheal | default(true)
       tags: autoheal
 
-    # Sablier пока не имеет отдельной роли (он встроен в Caddy plugin),
-    # но если ты решишь вынести его UI в отдельную роль, она будет здесь.
-    # - role: ziix.infra.sablier
-    #   when: use_sablier | default(false)
+    - role: ziix.infra.sablier
+      when: use_sablier | default(false)
+      tags: sablier
+
+    - role: ziix.infra.watchtower
+      when: watchtower_enabled | default(false)
+      tags: watchtower
 
     # ==========================================================================
     # LAYER 5: APPLICATIONS (Services Menu)

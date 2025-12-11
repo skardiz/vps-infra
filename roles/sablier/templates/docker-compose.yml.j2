@@ -23,8 +23,7 @@ services:
       - {{ sablier_network }}
 
     healthcheck:
-      # Простой чек API, чтобы убедиться, что сервер отвечает
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:10000/api/version"]
+      test: ["CMD", "sablier", "health"]
       interval: 30s
       timeout: 5s
       retries: 3

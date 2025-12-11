@@ -1,0 +1,47 @@
+services:
+  {{ watchtower_service_name }}:
+    image: {{ watchtower_image }}:{{ watchtower_image_tag }}
+    container_name: {{ watchtower_container_name }}
+    restart: unless-stopped
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      # - /home/{{ deploy_user }}/.docker/config.json:/config.json
+
+    environment:
+      # --- Scheduling ---
+      - WATCHTOWER_SCHEDULE={{ watchtower_schedule }}
+
+      # --- Behavior ---
+      - WATCHTOWER_CLEANUP={{ watchtower_cleanup | lower }}
+      - WATCHTOWER_INCLUDE_STOPPED={{ watchtower_include_stopped | lower }}
+      - WATCHTOWER_REVIVE_STOPPED={{ watchtower_revive_stopped | lower }}
+      - WATCHTOWER_MONITOR_ONLY={{ watchtower_monitor_only | lower }}
+      
+      # --- Safety ---
+      # Ждать healthcheck
+      - WATCHTOWER_ROLLING_RESTART={{ watchtower_rolling_restart | lower }}
+      # Таймаут остановки (важно для БД)
+      - WATCHTOWER_TIMEOUT={{ watchtower_timeout }}
+
+      # --- Notifications ---
+{% if watchtower_notifications_enabled | default(true) | bool and watchtower_notification_url | default('') | length > 0 %}
+      - WATCHTOWER_NOTIFICATIONS=shoutrrr
+      - WATCHTOWER_NOTIFICATION_URL={{ watchtower_notification_url }}
+      - WATCHTOWER_NO_STARTUP_MESSAGE={{ watchtower_no_startup_message | lower }}
+{% endif %}
+
+    deploy:
+      resources:
+        limits:
+          memory: {{ watchtower_memory_limit }}
+          cpus: '{{ watchtower_cpus }}'
+
+    networks:
+      - {{ watchtower_docker_network }}
+
+networks:
+  {{ watchtower_docker_network }}:
+    external: true

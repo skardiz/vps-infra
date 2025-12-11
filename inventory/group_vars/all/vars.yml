@@ -59,6 +59,7 @@ identity_enabled: true    # Auth (LLDAP, PocketID, TinyAuth)
 # --- Management & Monitoring ---
 dozzle_enabled: true      # Logs Viewer
 beszel_enabled: false      # Lightweight Monitoring
+watchtower_enabled: true
 
 # --- Applications ---
 vaultwarden_enabled: true # Password Manager
