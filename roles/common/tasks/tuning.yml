@@ -148,3 +148,17 @@
       [Install]
       WantedBy=multi-user.target
   notify: Enable and start network-offloads
+
+# [ OTHER ]
+- name: Optimize systemd-journald configuration
+  ansible.builtin.copy:
+    dest: /etc/systemd/journald.conf
+    mode: '0644'
+    content: |
+      [Journal]
+      SystemMaxUse=200M
+      SystemMaxFileSize=50M
+      MaxRetentionSec=2week
+      Compress=yes
+      Storage=persistent
+  notify: Restart systemd-journald

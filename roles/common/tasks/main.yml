@@ -14,3 +14,7 @@
 - name: Performance tuning (Sysctl, ZRAM, Network)
   ansible.builtin.import_tasks: tuning.yml
   tags: [common, tuning]
+
+- name: System Maintenance Tasks (Cron, Auto-cleanup)
+  ansible.builtin.import_tasks: maintenance.yml
+  tags: [common, maintenance]

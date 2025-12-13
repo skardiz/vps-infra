@@ -1,0 +1,35 @@
+---
+# Docker Maintenance (Auto-Prune)
+- name: Create systemd service for Docker prune
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/docker-prune.service
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Docker System Prune (Cleanup unused data)
+
+      [Service]
+      Type=oneshot
+      ExecStart=/bin/sh -c '/usr/bin/docker builder prune -a -f --filter "until=336h" && /usr/bin/docker image prune -f --filter "until=336h"'
+
+- name: Create systemd timer schedule (Monthly)
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/docker-prune.timer
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=Run Docker Prune monthly
+
+      [Timer]
+      OnCalendar=monthly
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+
+- name: Enable and start Docker prune timer
+  ansible.builtin.systemd:
+    name: docker-prune.timer
+    enabled: true
+    state: started
+    daemon_reload: true

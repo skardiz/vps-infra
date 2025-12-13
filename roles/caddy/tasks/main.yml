@@ -56,6 +56,18 @@
     - "443"
   tags: [caddy, firewall]
 
+- name: Create .dockerignore for Caddy
+  ansible.builtin.copy:
+    dest: "{{ caddy_compose_dir }}/.dockerignore"
+    mode: "0644"
+    content: |
+      .git
+      node_modules
+      data
+      config
+      tmp
+  tags: [caddy, config]
+
 - name: Build Caddy Image
   community.docker.docker_image:
     name: "{{ caddy_service_name }}:local"

@@ -24,6 +24,10 @@
       when: caddy_enabled | default(true)
       tags: caddy
 
+    - role: ziix.infra.crowdsec
+      when: crowdsec_enabled | default(true)
+      tags: crowdsec
+
     # ==========================================================================
     # LAYER 3: IDENTITY & AUTH
     # ==========================================================================

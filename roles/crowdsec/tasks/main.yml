@@ -1,0 +1,98 @@
+---
+# --- ЧАСТЬ 1: AGENT (LAPI) В DOCKER ---
+- name: Ensure CrowdSec directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+  loop:
+    - "{{ crowdsec_base_dir }}"
+    - "{{ crowdsec_base_dir }}/config"
+    - "{{ crowdsec_base_dir }}/data"
+
+- name: Create acquis.yaml
+  ansible.builtin.template:
+    src: acquis.yaml.j2
+    dest: "{{ crowdsec_base_dir }}/acquis.yaml"
+    mode: '0644'
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+  notify: Restart CrowdSec
+  tags: [crowdsec, config]
+
+- name: Create docker-compose.yml
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ crowdsec_base_dir }}/docker-compose.yml"
+    mode: '0644'
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+  notify: Restart CrowdSec
+  tags: [crowdsec, config]
+
+- name: Deploy CrowdSec Agent
+  community.docker.docker_compose_v2:
+    project_src: "{{ crowdsec_base_dir }}"
+    state: present
+    pull: missing
+    remove_orphans: true
+  become: true
+  become_user: "{{ deploy_user }}"
+  tags: [crowdsec, deploy]
+
+# --- ЧАСТЬ 2: BOUNCER НА ХОСТЕ (IPTABLES) ---
+
+- name: Download CrowdSec GPG key
+  ansible.builtin.get_url:
+    url: "https://packagecloud.io/crowdsec/crowdsec/gpgkey"
+    dest: "/usr/share/keyrings/crowdsec_crowdsec-archive-keyring.asc"
+    mode: '0644'
+  tags: [crowdsec, system]
+
+- name: Add CrowdSec Repository
+  ansible.builtin.apt_repository:
+    # Разбиваем длинную строку на несколько для читаемости и линтера
+    repo: >-
+      deb [signed-by=/usr/share/keyrings/crowdsec_crowdsec-archive-keyring.asc]
+      https://packagecloud.io/crowdsec/crowdsec/debian/
+      {{ ansible_distribution_release }} main
+    state: present
+    filename: crowdsec_crowdsec
+  tags: [crowdsec, system]
+
+- name: Install Firewall Bouncer
+  ansible.builtin.apt:
+    name: crowdsec-firewall-bouncer-iptables
+    state: present
+    update_cache: true
+  tags: [crowdsec, system]
+
+- name: Configure Firewall Bouncer
+  ansible.builtin.template:
+    src: crowdsec-firewall-bouncer.yaml.j2
+    dest: "/etc/crowdsec/bouncers/crowdsec-firewall-bouncer.yaml"
+    mode: '0600'
+  notify: Restart Bouncer
+  tags: [crowdsec, config]
+
+- name: Enable and Start Bouncer
+  ansible.builtin.systemd:
+    name: crowdsec-firewall-bouncer
+    enabled: true
+    state: started
+  tags: [crowdsec, deploy]
+
+# --- ЧАСТЬ 3: СВЯЗКА (РЕГИСТРАЦИЯ) ---
+
+- name: Register Bouncer with Agent (via Docker Exec)
+  community.docker.docker_container_exec:
+    container: crowdsec
+    command: "cscli bouncers add firewall-bouncer --key {{ vault_crowdsec.bouncer_key }}"
+  register: crowdsec_bouncer_add_result
+  failed_when:
+    - crowdsec_bouncer_add_result.rc != 0
+    - "'already exists' not in crowdsec_bouncer_add_result.stderr"
+  become: true
+  tags: [crowdsec, deploy]

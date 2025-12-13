@@ -53,6 +53,7 @@ use_autoheal: true
 # --- Core Infrastructure ---
 caddy_enabled: true       # Ingress Controller (Web Server)
 use_cloudflare_dns: true # Использовать ли Cloudflare Wildcard
+crowdsec_enabled: true    # <--- ДОБАВЛЕНО: CrowdSec (IPS/IDS)
 
 identity_enabled: true    # Auth (LLDAP, PocketID, TinyAuth)
 

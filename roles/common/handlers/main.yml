@@ -14,3 +14,8 @@
     enabled: true
     state: started
     daemon_reload: true
+
+- name: Restart systemd-journald
+  ansible.builtin.systemd:
+    name: systemd-journald
+    state: restarted

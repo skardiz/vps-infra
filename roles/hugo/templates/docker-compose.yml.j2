@@ -38,7 +38,7 @@ services:
 
   # --- Hugo Builder ---
   {{ hugo_builder_container }}:
-    image: hugomods/hugo:debian-exts
+    image: hugomods/hugo:base
     container_name: {{ hugo_builder_container }}
     restart: "no"
     environment:
